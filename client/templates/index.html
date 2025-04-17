@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Home</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav id="navbar" style="display: none;">
+        <div class="logo" onclick="showPage('home-page')">RealTimeForum</div>
+        <div class="user-menu">
+            <span id="usernameDisplay" onclick="toggleDropdown()">Hamza ▼</span>
+            <div id="dropdownMenu" class="dropdown-content">
+                <div onclick="showPage('add-post-page')">New Post</div>
+                <div onclick="showPage('register-login-page')">Logout</div>
+            </div>
+        </div>
+    </nav>
+
+
+    <section id="register-login-page">
+        <div class="main">
+            <input type="checkbox" id="chk" aria-hidden="true">
+
+            <div class="signup">
+                <form>
+                    <label for="chk" aria-hidden="true">Sign up</label>
+                    <input type="text" id="username" placeholder="Nickname" required>
+                    <p id="nicknameError" class="hidden">Please enter a valid nickname</p>
+                    <input type="text" id="age" placeholder="Age" required>
+                    <p id="ageError" class="hidden">Please enter a valid age</p>
+                    <input type="text" id="gender" placeholder="Gender" required>
+                    <p id="genderError" class="hidden">Please insert a valid gender</p>
+                    <input type="text" id="firstName" placeholder="First Name" required>
+                    <p id="firstNameError" class="hidden">Please insert a valid name</p>
+                    <input type="text" id="lastName" placeholder="Last Name" required>
+                    <p id="lastNameError" class="hidden">Please insert a valid name</p>
+                    <input type="email" id="email" placeholder="E-mail" required>
+                    <p id="emailError" class="hidden">Please insert a valid Email</p>
+                    <input type="password" id="pswd" placeholder="Password" required>
+                    <p id="passwordError" class="hidden">Please insert a valid password</p>
+                    <button type="button" id="signupBtn" onclick="showPage('home-page')" disabled>Sign up</button>
+                </form>
+                <script src="/static/js/sign_up.js"></script>
+            </div>
+
+            <div class="login">
+                <form>
+                    <label for="chk" aria-hidden="true">Login</label>
+                    <input type="email" id="emailNickname" placeholder="Email or Nickname" required>
+                    <p id="emailNicknameError" class="hidden">Please insert a valid nickname or a valid email</p>
+                    <input type="password" id="loginPswd" placeholder="Password" required>
+                    <p id="loginPasswordError" class="hidden">Please insert a valid password</p>
+                    <button type="button" id="loginBtn" onclick="showPage('home-page')" disabled>Login</button>
+                </form>
+                <script src="/static/js/login.js"></script>
+            </div>
+        </div>
+    </section>
+
+    <section id="home-page" style="display:none;">
+    </section>
+    <section id="add-post-page" style="display:none;">
+        <form method="post" id="postForm" class="post">
+            <label>New Post</label>
+            <input type="text" id="title" placeholder="Title" required>
+            <input type="text" id="custom" placeholder="Add a custom category">
+            <button id="addCategory">Add Category</button>
+            <select id="categories">
+                <option value="" disabled selected>Choose your category</option>
+                <option value="sport">sport</option>
+                <option value="reading">reading</option>
+                <option value="traveling">traveling</option>
+            </select>
+            <textarea type="text" id="content" placeholder="content" required></textarea>
+            <p id="contentError" class="hidden">Please enter a valid text !</p>
+            <button id="submit" onclick="showPage('home-page')" disabled>Submit</button>
+        </form>
+        <script src="/static/js/post.js"></script>
+    </section>
+    <section id="profile-page" style="display:none;">
+        <button id="update" onclick="showPage('home-page')">Update</button>
+    </section>
+    <section id="error-page">
+        <div class="card">
+            <div class="text">
+                <h1>Error {{ .StatusCode}}</h1>
+                <p>{{.Message}}</p>
+            </div>
+        </div>
+        <div class="ok">
+            <a href="/">
+                <p>HOME</p>
+            </a>
+        </div>
+    </section>
+    <script src="/static/js/index.js"></script>
+</body>
+
+</html>
