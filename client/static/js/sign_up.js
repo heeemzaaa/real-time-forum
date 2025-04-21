@@ -118,30 +118,31 @@ document.getElementById('signupBtn').addEventListener('click', function (event) 
   event.preventDefault()
 
   const user = {
-    username : document.getElementById('username').value,
-    email : document.getElementById('email').value,
-    age : document.getElementById('age').value,
-    gender : document.getElementById('gender').value,
-    firstName : document.getElementById('firstName').value,
-    lastName : document.getElementById('lastName').value,
-    password : document.getElementById('pswd').value
+    Username: document.getElementById('username').value,
+    Email: document.getElementById('email').value,
+    Age: parseInt(document.getElementById('age').value),
+    Gender: document.getElementById('gender').value,
+    FirstName: document.getElementById('firstName').value,
+    LastName: document.getElementById('lastName').value,
+    PasswordHash: document.getElementById('pswd').value
   }
 
-  fetch('api/signUp' , {
+
+  fetch('api/signup', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(user)
   })
-  .then(response => response.json())
-  .then(result => {
-    console.log("data sent successfully:" , result)
-    showPage('home-page')
-  })
-  .catch((error) => {
-    console.error('error in the sign up:' , error)
-  })
+    .then(async response => await response.json())
+    .then(result => {
+      console.log("data sent successfully:", result)
+      showPage('home-page')
+    })
+    .catch((error) => {
+      console.error('error in the sign up:', error)
+    })
 
 
   showPage('home-page')

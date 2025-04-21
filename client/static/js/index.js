@@ -3,7 +3,7 @@ function toggleDropdown() {
 }
 
 function showPage(pageId) {
-  const pages = ['register-login-page', 'home-page', 'add-post-page', 'profile-page' , 'error-page']
+  const pages = ['register-login-page', 'home-page', 'add-post-page', 'profile-page']
   pages.forEach(id => {
     document.getElementById(id).style.display = (id === pageId) ? 'block' : 'none'
   })
