@@ -24,7 +24,7 @@ func init() {
 
 func main() {
 	var err error
-	g.Tpl , err = g.Tpl.ParseFiles(filepath.Join("client", "templates", "index.html"))
+	g.Tpl, err = g.Tpl.ParseFiles(filepath.Join("client", "templates", "index.html"))
 	if err != nil {
 		log.Fatal("Error in the parsing!")
 	}
@@ -34,6 +34,8 @@ func main() {
 
 	// API endpoint
 	http.HandleFunc("/api/signup", h.HandleSignUp)
+	http.HandleFunc("/api/login", h.HandleLogin)
+	http.HandleFunc("/api/newpost", h.PostHandler)
 
 	// Catch-all: Serve index.html for all frontend routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

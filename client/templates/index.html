@@ -11,7 +11,7 @@
     <nav id="navbar" style="display: none;">
         <div class="logo" onclick="showPage('home-page')">RealTimeForum</div>
         <div class="user-menu">
-            <span id="usernameDisplay" onclick="toggleDropdown()">Hamza ▼</span>
+            <span id="usernameDisplay" onclick="toggleDropdown()"></span>
             <div id="dropdownMenu" class="dropdown-content">
                 <div onclick="showPage('add-post-page')">New Post</div>
                 <div onclick="showPage('register-login-page')">Logout</div>
@@ -41,7 +41,9 @@
                     <p id="emailError" class="hidden">Please insert a valid Email</p>
                     <input type="password" id="pswd" placeholder="Password" required>
                     <p id="passwordError" class="hidden">Please insert a valid password</p>
-                    <button type="button" id="signupBtn" onclick="showPage('home-page')" disabled>Sign up</button>
+                    <button type="button" id="signupBtn" disabled>Sign up</button>
+                    <p id="alreadyUsed" class="hidden">Email or username already used!</p>
+                    <p id="fillAll" class="hidden">Please fill in all required fields!</p>
                 </form>
                 <script src="/static/js/sign_up.js"></script>
             </div>
@@ -53,7 +55,9 @@
                     <p id="emailNicknameError" class="hidden">Please insert a valid nickname or a valid email</p>
                     <input type="password" id="loginPswd" placeholder="Password" required>
                     <p id="loginPasswordError" class="hidden">Please insert a valid password</p>
-                    <button type="button" id="loginBtn" onclick="showPage('home-page')" disabled>Login</button>
+                    <button type="button" id="loginBtn" disabled>Login</button>
+                    <p id="falseUser" class="hidden">Username or Email not found !</p>
+                    <p id="falsePaswd" class="hidden">Password not correct !</p>
                 </form>
                 <script src="/static/js/login.js"></script>
             </div>
@@ -70,10 +74,8 @@
             <button id="addCategory">Add Category</button>
             <select id="categories">
                 <option value="" disabled selected>Choose your category</option>
-                <option value="sport">sport</option>
-                <option value="reading">reading</option>
-                <option value="traveling">traveling</option>
             </select>
+            <p id="categoryError" class="hidden">Can't add this category because it's already there</p>
             <textarea type="text" id="content" placeholder="content" required></textarea>
             <p id="contentError" class="hidden">Please enter a valid text !</p>
             <button id="submit" onclick="showPage('home-page')" disabled>Submit</button>
@@ -83,19 +85,6 @@
     <section id="profile-page" style="display:none;">
         <button id="update" onclick="showPage('home-page')">Update</button>
     </section>
-    <!-- <section id="error-page" style="display:none;">
-        <div class="card">
-            <div class="text">
-                <h1>Error {{ .StatusCode}}</h1>
-                <p>{{.Message}}</p>
-            </div>
-        </div>
-        <div class="ok">
-            <a href="/">
-                <p>HOME</p>
-            </a>
-        </div>
-    </section> -->
     <script src="/static/js/index.js"></script>
 </body>
 

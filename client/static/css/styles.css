@@ -214,6 +214,19 @@ p {
     margin-left: 13%;
 }
 
+#alreadyUsed, #fillAll {
+    margin-left: 27%;
+    margin-top: 3px;
+}
+
+#falseUser {
+    margin-left: 28%;
+}
+
+#falsePaswd {
+    margin-left: 35%;
+}
+
 #signupBtn:disabled {
     background-color: #cccccc;
     cursor: not-allowed;

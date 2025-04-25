@@ -137,13 +137,18 @@ document.getElementById('signupBtn').addEventListener('click', function (event) 
   })
     .then(async response => await response.json())
     .then(result => {
-      console.log("data sent successfully:", result)
-      showPage('home-page')
+      if (result.message === 'Email or username already used!') {
+        document.getElementById('alreadyUsed').classList.remove('hidden')
+        document.getElementById('alreadyUsed').style.color = 'red'
+      } else if (result.message === 'Please fill in all required fields') {
+        document.getElementById('fillAll').classList.remove('hidden')
+        document.getElementById('fillAll').style.color = 'red'
+      } else {
+        document.getElementById('usernameDisplay').textContent = user.Username + " " + "▼"
+        showPage('home-page')
+      }
     })
     .catch((error) => {
       console.error('error in the sign up:', error)
     })
-
-
-  showPage('home-page')
 })

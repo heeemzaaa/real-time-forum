@@ -1,4 +1,5 @@
 let select = document.getElementById('categories')
+let options = select.options;
 let newCategory = ""
 let category = ""
 let categoryStatus = false
@@ -16,18 +17,41 @@ function validPost() {
     }
 }
 
+
+let categories = [];
+for (let i = 0; i < options.length; i++) {
+    if (!options[i].disabled) {
+        categories.push(options[i].value);
+    }
+}
+
 document.getElementById('addCategory').addEventListener('click', function (event) {
     event.preventDefault()
 
     newCategory = document.getElementById('custom').value
-    let option = document.createElement('option')
-    option.value = newCategory
-    option.textContent = newCategory
-    select.appendChild(option)
+    let add = true
+    for (let i = 0; i < categories.length; i++) {
+        if (newCategory === categories[i]) {
+            add = false
+            break
+        }
+    }
+    if (add) {
+        categories.push(newCategory)
+        document.getElementById('categoryError').classList.add('hidden')
+        let option = document.createElement('option')
+        option.value = newCategory
+        option.textContent = newCategory
+        select.appendChild(option)
+    } else {
+        document.getElementById('categoryError').classList.remove('hidden')
+        document.getElementById('categoryError').style.color = 'red'
+    }
+
 })
 
-select.addEventListener('select', function () {
-    document.getElementById('categories').value
+select.addEventListener('change', function (event) {    
+    let selectedCategory =  event.target.value;
     categoryStatus = true
     validPost()
 })
@@ -50,19 +74,19 @@ document.getElementById('submit').addEventListener('click', function (event) {
     event.preventDefault()
 
     const postData = {
-        title: document.getElementById('title').value,
-        addCategory: document.getElementById('custom').value || "",
-        category: document.getElementById('categories').value,
-        content: document.getElementById('content').value
+        Title: document.getElementById('title').value,
+        Category: document.getElementById('categories').value,
+        Content: document.getElementById('content').value
     }
 
-    fetch('api/newPost', {
+    fetch('api/newpost', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(postData)
-    }).then(response => response.json()).then(data => {
+    }).then(async response => await response.json())
+    .then(data => {
         console.log('data sent successfully:', data)
         showPage('home-page')
     }).catch((error) => {

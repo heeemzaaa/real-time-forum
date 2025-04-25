@@ -36,8 +36,8 @@ document.getElementById('loginBtn').addEventListener('click', function (event) {
     event.preventDefault()
 
     const loginUser = {
-        usernameOrEmail: document.getElementById('emailNickname').value,
-        password: document.getElementById('loginPswd').value
+        UsernameOrEmail: document.getElementById('emailNickname').value,
+        Password: document.getElementById('loginPswd').value
     }
 
     fetch('api/login', {
@@ -46,13 +46,20 @@ document.getElementById('loginBtn').addEventListener('click', function (event) {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(loginUser)
-    }).then(response => response.json())
-        .then(data => {
-            console.log('data sent successfully:', data)
-            showPage('home-page')
+    }).then(async response => await response.json())
+        .then(result => {
+            if (result.message === 'Username or Email not found !') {
+                document.getElementById('falseUser').classList.remove('hidden')
+                document.getElementById('falseUser').style.color = 'red'
+            } else if (result.message === 'Password not correct!') {
+                document.getElementById('falsePaswd').classList.remove('hidden')
+                document.getElementById('falsePaswd').style.color = 'red'
+            } else {
+                document.getElementById('usernameDisplay').textContent = result.username + " " + "▼"
+                showPage('home-page')
+            }
         })
         .catch((error) => {
             console.error('error in the login :', error)
         })
-    showPage('home-page')
 });
