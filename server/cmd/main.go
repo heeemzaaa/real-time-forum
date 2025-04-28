@@ -33,9 +33,13 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// API endpoint
+	http.HandleFunc("/api/check-session", h.CheckSession)
+	http.HandleFunc("/api/get-posts" , h.HandleGetPosts)
+	http.HandleFunc("/api/get-categories" , h.HandleCategories)
+	http.HandleFunc("/api/newpost", h.PostHandler)
 	http.HandleFunc("/api/signup", h.HandleSignUp)
 	http.HandleFunc("/api/login", h.HandleLogin)
-	http.HandleFunc("/api/newpost", h.PostHandler)
+	http.HandleFunc("/api/logout" , h.HandleLogout)
 
 	// Catch-all: Serve index.html for all frontend routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

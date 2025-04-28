@@ -5,6 +5,7 @@ let category = ""
 let categoryStatus = false
 let contentStatus = false
 
+
 function validPost() {
     if (categoryStatus && contentStatus) {
         console.log(categoryStatus)
@@ -27,7 +28,6 @@ for (let i = 0; i < options.length; i++) {
 
 document.getElementById('addCategory').addEventListener('click', function (event) {
     event.preventDefault()
-
     newCategory = document.getElementById('custom').value
     let add = true
     for (let i = 0; i < categories.length; i++) {
@@ -47,11 +47,10 @@ document.getElementById('addCategory').addEventListener('click', function (event
         document.getElementById('categoryError').classList.remove('hidden')
         document.getElementById('categoryError').style.color = 'red'
     }
-
 })
 
-select.addEventListener('change', function (event) {    
-    let selectedCategory =  event.target.value;
+select.addEventListener('change', function (event) {
+    let selectedCategory = event.target.value;
     categoryStatus = true
     validPost()
 })
@@ -86,10 +85,36 @@ document.getElementById('submit').addEventListener('click', function (event) {
         },
         body: JSON.stringify(postData)
     }).then(async response => await response.json())
-    .then(data => {
-        console.log('data sent successfully:', data)
-        showPage('home-page')
-    }).catch((error) => {
-        console.error('Error in the post:', error)
-    })
+        .then(data => {
+            console.log('data sent successfully:', data)
+            showPage('home-page')
+        }).catch((error) => {
+            console.error('Error in the post:', error)
+        })
+    document.getElementById('title').value = ""
+    document.getElementById('categories').value = ""
+    document.getElementById('content').value = ""
+    document.getElementById('custom').value = ""
 })
+
+function loadCategories() {
+    fetch('/api/get-categories', {
+        credentials: 'include'
+    })
+        .then(response => response.json())
+        .then(result => {
+            console.log(result)
+            select.innerHTML = '<option value="" disabled selected>Choose your category</option>'
+            result.forEach(category => {
+                categories.push(category.Category_name)
+                let option = document.createElement('option')
+                option.value = category.Category_name
+                option.textContent = category.Category_name
+                select.appendChild(option)
+            })
+        })
+        .catch((error) => {
+            console.log('Error:', error)
+        })
+}
+

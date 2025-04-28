@@ -14,9 +14,10 @@
             <span id="usernameDisplay" onclick="toggleDropdown()"></span>
             <div id="dropdownMenu" class="dropdown-content">
                 <div onclick="showPage('add-post-page')">New Post</div>
-                <div onclick="showPage('register-login-page')">Logout</div>
+                <div id="logout">Logout</div>
             </div>
         </div>
+        <script src="/static/js/logout.js"></script>
     </nav>
 
 
@@ -73,7 +74,7 @@
             <input type="text" id="custom" placeholder="Add a custom category">
             <button id="addCategory">Add Category</button>
             <select id="categories">
-                <option value="" disabled selected>Choose your category</option>
+                
             </select>
             <p id="categoryError" class="hidden">Can't add this category because it's already there</p>
             <textarea type="text" id="content" placeholder="content" required></textarea>

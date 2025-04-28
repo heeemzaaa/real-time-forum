@@ -11,7 +11,35 @@ html {
     background: linear-gradient(to bottom, #0f0c29, #1609a5, #22223a);
 }
 
+#postCard {
+    margin-top: 150px; /* Push it down under the navbar */
+    background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent dark background */
+    color: white; /* Text color white */
+    width: 800px;
+    height: auto;
+    overflow: hidden;
+    border-radius: 10px;
+    box-shadow: 5px 20px 50px #000;
+    padding: 20px; /* Some space inside the card */
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    gap: 20px; /* Space between Title, Category, Content */
+}
+
+#home-page {
+    padding-top: 150px;
+}
+
 .main {
+    width: 500px;
+    height: 700px;
+    overflow: hidden;
+    border-radius: 10px;
+    box-shadow: 5px 20px 50px #000;
+}
+
+#postCard {
     width: 500px;
     height: 700px;
     overflow: hidden;

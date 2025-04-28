@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"database/sql"
+	"encoding/json"
+	"log"
 	"net/http"
 	g "real-time-forum/server/globalVar"
 	"time"
@@ -8,24 +11,66 @@ import (
 	"github.com/google/uuid"
 )
 
-func CreateSession(w http.ResponseWriter, userId string) error {
-	sessionId := uuid.New().String()
+func CreateSession(w http.ResponseWriter, userId string, username string) error {
+	var existingSessionID string
+	var expiration time.Time
+	now := time.Now()
 
-	expiration := time.Now().Add(24 * time.Hour)
+	err := g.DB.QueryRow("SELECT id, expires_at FROM Session WHERE user_id = ?", userId).Scan(&existingSessionID, &expiration)
 
-	_, err := g.DB.Exec(`INSERT INTO Session (id , user_id, expires_at) VALUES (?,?,?)`, sessionId, userId, expiration)
+	if err == nil && expiration.After(now) {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "session_id",
+			Value:    existingSessionID,
+			Path:     "/",
+			Expires:  expiration,
+			HttpOnly: true,
+			Secure:   false,
+			SameSite: http.SameSiteLaxMode,
+		})
+		return nil
+	}
+
+	newSessionID := uuid.New().String()
+	newExpiration := now.Add(24 * time.Hour)
+
+	if err == sql.ErrNoRows {
+		_, err = g.DB.Exec(`INSERT INTO Session (id, user_id, expires_at, username) VALUES (?, ?, ?, ?)`, newSessionID, userId, newExpiration, username)
+	} else {
+		_, err = g.DB.Exec(`UPDATE Session SET id = ?, expires_at = ? WHERE user_id = ?`, newSessionID, newExpiration, userId)
+	}
 	if err != nil {
 		return err
 	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_id",
-		Value:    sessionId,
+		Value:    newSessionID,
 		Path:     "/",
-		Expires:  expiration,
+		Expires:  newExpiration,
 		HttpOnly: true,
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 	})
+
 	return nil
+}
+
+func CheckSession(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	var expiration time.Time
+	var username string
+	err = g.DB.QueryRow("SELECT username,expires_at FROM Session WHERE id = ?", cookie.Value).Scan(&username, &expiration)
+	if err != nil || time.Now().After(expiration) {
+		log.Println(err)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "ok", "username": username})
 }

@@ -60,8 +60,10 @@ CREATE TABLE IF NOT EXISTS likeDislike (
 CREATE TABLE IF NOT EXISTS Session (
     id TEXT UNIQUE PRIMARY KEY,
     user_id TEXT NOT NULL,
+    username TEXT NOT NULL,
     expires_at DATETIME NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES Users(id)
+    FOREIGN KEY (user_id) REFERENCES Users(id),
+    FOREIGN KEY (username) REFERENCES Users(username)
 );
 
 -- 8. Conversations 💬​

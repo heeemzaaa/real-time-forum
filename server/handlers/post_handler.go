@@ -31,14 +31,14 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = AddCategory(post.Categories)
+	err = AddCategory(w ,post.Categories)
 	if err != nil {
 		log.Println("Failed to create session:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to insert category !"})
 	}
 
-	cookie , err := r.Cookie("session_id")
+	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -47,7 +47,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	sessionId := cookie.Value
 
 	userId := ""
-	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?" , sessionId).Scan(&userId)
+	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", sessionId).Scan(&userId)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -86,9 +86,9 @@ func AddPost(post g.Post) error {
 	return nil
 }
 
-func AddCategory(categories string) error {
+func AddCategory(w http.ResponseWriter, categories string) error {
 	var exist int
-	err := g.DB.QueryRow("SELECT COUNT (*) FROM categories WHERE category_name = ?" , categories).Scan(&exist)
+	err := g.DB.QueryRow("SELECT COUNT (*) FROM categories WHERE category_name = ?", categories).Scan(&exist)
 	if err != nil {
 		fmt.Println(20, err)
 		return fmt.Errorf("db error: %v", err)
@@ -98,11 +98,44 @@ func AddCategory(categories string) error {
 	}
 	categoryId := uuid.New().String()
 
-	query := `INSERT INTO categories (id,category_name) VALUES (?,?)`
-	_, err = g.DB.Exec(query, categoryId, categories)
+	rows, err := g.DB.Query("SELECT category_name FROM categories")
 	if err != nil {
-		fmt.Println(21, err)
-		return fmt.Errorf("db error: %v", err)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to retrieve posts"})
+		w.WriteHeader(http.StatusInternalServerError)
+		return err
 	}
+	defer rows.Close()
+
+	var ReserveCategories []string
+
+	for rows.Next() {
+		var category string
+		err = rows.Scan(&category)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to scan categories"})
+			w.WriteHeader(http.StatusInternalServerError)
+			return err
+		}
+		ReserveCategories = append(ReserveCategories, category)
+	}
+	add := true
+	for i := 0; i < len(ReserveCategories); i++ {
+		if ReserveCategories[i] == categories {
+			add = false
+			break
+		}
+	}
+
+	if add {
+		query := `INSERT INTO categories (id,category_name) VALUES (?,?)`
+		_, err = g.DB.Exec(query, categoryId, categories)
+		if err != nil {
+			fmt.Println(21, err)
+			return fmt.Errorf("db error: %v", err)
+		}
+	} else {
+		log.Println("Category already exist !")
+	}
+
 	return nil
 }

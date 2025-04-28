@@ -63,7 +63,7 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = CreateSession(w, userId)
+	err = CreateSession(w, userId, user.Username)
 	if err != nil {
 		log.Println("Failed to create session:", err)
 		w.WriteHeader(http.StatusInternalServerError)
