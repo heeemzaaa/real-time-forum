@@ -8,9 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     firstName TEXT NOT NULL,
     lastName TEXT NOT NULL,
     password_hash TEXT NOT NULL,
-    user_image TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 2. Posts 📝​
@@ -19,7 +17,6 @@ CREATE TABLE IF NOT EXISTS posts (
     user_id TEXT NOT NULL,
     title TEXT,
     content TEXT,
-    image_url TEXT, -- URL or path to the post image
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
@@ -31,7 +28,6 @@ CREATE TABLE IF NOT EXISTS comments (
     user_id TEXT NOT NULL,
     content TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES posts(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
@@ -43,18 +39,6 @@ CREATE TABLE IF NOT EXISTS categories (
     category_name TEXT UNIQUE NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-
--- 6. LikeDislike 👍👎​
-CREATE TABLE IF NOT EXISTS likeDislike (
-    id TEXT UNIQUE PRIMARY KEY, 
-    user_id TEXT NOT NULL,
-    post_id TEXT NOT NULL,
-    is_like BOOLEAN NOT NULL, 
-    is_comment BOOLEAN NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
-);
-
 
 -- 7. Session 🍪​
 CREATE TABLE IF NOT EXISTS Session (

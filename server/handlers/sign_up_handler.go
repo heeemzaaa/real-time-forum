@@ -83,10 +83,10 @@ func RegisterClient(user g.User) (string,error) {
 		return "",fmt.Errorf("hash error: %v", err)
 	}
 
-	query := `INSERT INTO users (id, username, email, age, gender, firstName, lastName, password_hash, user_image)
+	query := `INSERT INTO users (id, username, email, age, gender, firstName, lastName, password_hash)
 			  VALUES (?,?,?,?,?,?,?,?,?)`
 
-	_, err = g.DB.Exec(query, id, user.Username, user.Email, user.Age, user.Gender, user.FirstName, user.LastName, string(hashedPassword), user.Image)
+	_, err = g.DB.Exec(query, id, user.Username, user.Email, user.Age, user.Gender, user.FirstName, user.LastName, string(hashedPassword))
 	if err != nil {
 		fmt.Println(16, err)
 		return "",fmt.Errorf("db error: %v", err)

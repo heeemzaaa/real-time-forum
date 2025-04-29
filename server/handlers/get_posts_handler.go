@@ -7,13 +7,13 @@ import (
 	g "real-time-forum/server/globalVar"
 )
 
-func HandleGetPosts(w http.ResponseWriter , r *http.Request) {
-	rows , err := g.DB.Query("SELECT id,title,content,created_at FROM posts")
+func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
+	rows, err := g.DB.Query("SELECT id,title,content,created_at FROM posts")
 	if err != nil {
-		log.Println("Failed to retrieve posts:" , err)
+		log.Println("Failed to retrieve posts:", err)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to retrieve posts"})
 		w.WriteHeader(http.StatusInternalServerError)
-		return 
+		return
 	}
 	defer rows.Close()
 
@@ -25,7 +25,7 @@ func HandleGetPosts(w http.ResponseWriter , r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		err = g.DB.QueryRow("SELECT category_name FROM CategoriesByPost WHERE post_id = ?" , post.ID).Scan(&post.Categories)
+		err = g.DB.QueryRow("SELECT category_name FROM CategoriesByPost WHERE post_id = ?", post.ID).Scan(&post.Categories)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -34,8 +34,20 @@ func HandleGetPosts(w http.ResponseWriter , r *http.Request) {
 		}
 		g.Posts = append(g.Posts, post)
 	}
-
+	var posts []g.Post
+	for i := len(g.Posts)-1; i >= 0; i-- {
+		posts = append(posts, g.Posts[i])
+	}
 	w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(g.Posts)
+	json.NewEncoder(w).Encode(posts)
+	posts = nil
 	g.Posts = nil
+}
+
+func reverseArray(arr []int) []int {
+	reversed := make([]int, len(arr))
+	for i := 0; i < len(arr); i++ {
+		reversed[i] = arr[len(arr)-1-i]
+	}
+	return reversed
 }
