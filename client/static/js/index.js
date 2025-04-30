@@ -1,4 +1,4 @@
-const pages = ['home-page', 'register-login-page', 'add-post-page', 'profile-page']
+const pages = ['home-page', 'register-login-page', 'add-post-page', 'profile-page', 'single-post-page']
 
 pages.forEach(id => {
   document.getElementById(id).style.display = 'none'
@@ -35,10 +35,14 @@ function loadPosts() {
       section.style.gridTemplateColumns = "1fr";
       section.style.width = "100%";
 
-
       posts.forEach(post => {
         const postCard = document.createElement('div')
         postCard.id = "postCard"
+        // Add click event to each post card
+        postCard.addEventListener('click', () => {
+          showSinglePost(post.id)
+        })
+        postCard.style.cursor = "pointer"
 
         function createField(valueText) {
           const field = document.createElement('div')

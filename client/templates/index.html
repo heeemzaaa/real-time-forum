@@ -89,6 +89,26 @@
     <section id="profile-page" style="display:none;">
         <button id="update" onclick="showPage('home-page')">Update</button>
     </section>
+    
+    <section id="single-post-page" style="display:none;">
+        <div class="content-wrapper">
+            <div id="singlePostContainer">
+                <!-- Single post will be displayed here -->
+            </div>
+            
+            <div id="commentsSection">
+                <h2>Comments</h2>
+                <div id="commentsList">
+                    <!-- Comments will be displayed here -->
+                </div>
+                
+                <div id="addCommentForm">
+                    <textarea id="commentContent" placeholder="Write a comment..." required></textarea>
+                    <button id="submitComment" type="button">Add Comment</button>
+                </div>
+            </div>
+        </div>
+    </section>
     <script src="/static/js/index.js"></script>
 </body>
 
