@@ -437,7 +437,6 @@ p {
 
 .commentContent {
     font-size: 16px;
-    margin-bottom: 10px;
 }
 
 .commentMeta {
@@ -448,14 +447,13 @@ p {
 }
 
 #addCommentForm {
-    margin-top: 30px;
+    margin-top: 15px;
 }
 
 #commentContent {
     width: 97%;
     height: 100px;
     padding: 10px;
-    margin-bottom: 10px;
     border-radius: 5px;
     border: 1px solid #707070;
     resize: vertical;
@@ -479,8 +477,21 @@ p {
     cursor: pointer;
 }
 
+#submitComment:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+
 #submitComment:hover {
     background-color: #564bd1;
+}
+
+#errorComment {
+    margin-left: 32vh;
+    z-index: 1000;
 }
 
 .noComments {

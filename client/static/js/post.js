@@ -119,7 +119,6 @@ function loadCategories() {
 }
 
 function showSinglePost(postId) {
-    // Get the post details from the server
     fetch(`/api/get-post/${postId}`, {
         credentials: 'include'
     })
@@ -160,8 +159,19 @@ function showSinglePost(postId) {
             loadComments(postId)
 
             // Set up comment submission for this post
-            const submitBtn = document.getElementById('submitComment')
-            submitBtn.onclick = () => submitComment(postId)
+            const submitBtn = document.getElementById('submitComment');
+            const commentContent = document.getElementById('commentContent');
+
+            commentContent.addEventListener('input', () => {
+                const content = commentContent.value.trim();
+                if (!content) {
+                    submitBtn.disabled = true;
+                } else {
+                    submitBtn.disabled = false;
+                }
+            });
+
+            submitBtn.onclick = () => submitComment(postId);
 
             // Show the single post page
             showPage('single-post-page')
@@ -222,10 +232,11 @@ function loadComments(postId) {
 
 // Add function to submit a comment
 function submitComment(postId) {
-    const content = document.getElementById('commentContent').value.trim()
+    const content = document.getElementById('commentContent').value
 
     if (!content) {
-        alert("Comment cannot be empty")
+        document.getElementById('errorComment').classList.remove('hidden')
+        document.getElementById('errorComment').style.color = "red"
         return
     }
 
