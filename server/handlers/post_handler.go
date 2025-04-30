@@ -63,7 +63,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Post created !"})
 }
 
@@ -104,7 +103,6 @@ func AddCategory(w http.ResponseWriter, categories string) error {
 		w.WriteHeader(http.StatusInternalServerError)
 		return err
 	}
-	defer rows.Close()
 
 	var ReserveCategories []string
 
@@ -112,12 +110,16 @@ func AddCategory(w http.ResponseWriter, categories string) error {
 		var category string
 		err = rows.Scan(&category)
 		if err != nil {
+			rows.Close()
 			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to scan categories"})
 			w.WriteHeader(http.StatusInternalServerError)
 			return err
 		}
 		ReserveCategories = append(ReserveCategories, category)
 	}
+
+	rows.Close()
+	
 	add := true
 	for i := 0; i < len(ReserveCategories); i++ {
 		if ReserveCategories[i] == categories {

@@ -31,28 +31,33 @@ function loadPosts() {
       const section = document.getElementById('home-page')
       section.innerHTML = ""
 
+      section.style.display = "grid";
+      section.style.gridTemplateColumns = "1fr";
+      section.style.width = "100%";
+
+
       posts.forEach(post => {
         const postCard = document.createElement('div')
         postCard.id = "postCard"
 
-        function createField(labelText, valueText) {
+        function createField(valueText) {
           const field = document.createElement('div')
-
-          const label = document.createElement('strong')
-          label.textContent = labelText
 
           const value = document.createElement('span')
           value.textContent = valueText
-
-          field.append(label, " ", value)
+          field.append(value)
           return field
         }
 
+        // Format date to be more readable
+        const createdDate = new Date(post.created_at);
+        const formattedDate = `${createdDate.toLocaleDateString()} ${createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
         postCard.append(
-          createField("Title:", post.Title),
-          createField("Category:", post.Category),
-          createField("Content:", post.Content),
-          createField("Created at:", post.created_at)
+          createField(post.Title),
+          createField(post.Category),
+          createField(post.Content),
+          createField(formattedDate)
         )
 
         section.append(postCard)
@@ -92,14 +97,3 @@ window.addEventListener('click', function (e) {
     menu.classList.remove('active')
   }
 })
-
-
-
-
-
-
-
-
-
-
-

@@ -58,4 +58,5 @@ var (
 	Posts             []Post
 	SliceOfCategories []Categories
 	Comments          []Comment
+	ReserveCategories []string
 )

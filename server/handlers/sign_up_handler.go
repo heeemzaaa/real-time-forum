@@ -84,7 +84,7 @@ func RegisterClient(user g.User) (string,error) {
 	}
 
 	query := `INSERT INTO users (id, username, email, age, gender, firstName, lastName, password_hash)
-			  VALUES (?,?,?,?,?,?,?,?,?)`
+			  VALUES (?,?,?,?,?,?,?,?)`
 
 	_, err = g.DB.Exec(query, id, user.Username, user.Email, user.Age, user.Gender, user.FirstName, user.LastName, string(hashedPassword))
 	if err != nil {
