@@ -22,18 +22,35 @@ window.addEventListener('DOMContentLoaded', () => {
     })
 })
 
-function loadPosts() {
-  fetch('/api/get-posts', {
-    credentials: 'include'
-  })
+function loadPosts(categoryFilter = null) {
+  // Create request options
+  const options = {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ category: categoryFilter })
+  };
+
+  // Always use the same endpoint without changing the URL
+  fetch('/api/get-posts', options)
     .then(response => response.json())
     .then(posts => {
-      const section = document.getElementById('home-page')
-      section.innerHTML = ""
+      const postsContainer = document.getElementById('postsContainer')
+      postsContainer.innerHTML = ""
 
-      section.style.display = "grid";
-      section.style.gridTemplateColumns = "1fr";
-      section.style.width = "100%";
+      if (posts.length === 0) {
+        const noPosts = document.createElement('div')
+        noPosts.style.textAlign = 'center'
+        noPosts.style.padding = '30px'
+        noPosts.style.color = '#888'
+        noPosts.textContent = categoryFilter ?
+          `No posts found in the "${categoryFilter}" category.` :
+          'No posts found.'
+        postsContainer.appendChild(noPosts)
+        return
+      }
 
       posts.forEach(post => {
         const postCard = document.createElement('div')
@@ -46,7 +63,6 @@ function loadPosts() {
 
         function createField(valueText) {
           const field = document.createElement('div')
-
           const value = document.createElement('span')
           value.textContent = valueText
           field.append(value)
@@ -64,7 +80,7 @@ function loadPosts() {
           createField(formattedDate)
         )
 
-        section.append(postCard)
+        postsContainer.append(postCard)
       })
     }).catch(error => {
       console.error("Failed to load posts", error)
@@ -87,7 +103,8 @@ function showPage(pageId) {
   }
 
   if (pageId === 'home-page') {
-    loadPosts()
+    loadCategoryFilters() // Load category filters first
+    loadPosts() // Then load all posts
   }
 
   if (pageId === 'add-post-page') {
@@ -95,9 +112,55 @@ function showPage(pageId) {
   }
 }
 
+
 window.addEventListener('click', function (e) {
   const menu = document.querySelector('.user-menu')
   if (!menu.contains(e.target)) {
     menu.classList.remove('active')
   }
 })
+
+function loadCategoryFilters() {
+  fetch('/api/get-categories', {
+    credentials: 'include'
+  })
+    .then(response => response.json())
+    .then(categories => {
+      const categoriesFilter = document.getElementById('categoriesFilter')
+      categoriesFilter.innerHTML = ""
+
+      // Add "All" button first
+      const allButton = document.createElement('button')
+      allButton.className = 'category-button active'
+      allButton.textContent = 'All'
+      allButton.addEventListener('click', () => {
+        setActiveCategory(allButton)
+        loadPosts()
+      })
+      categoriesFilter.appendChild(allButton)
+
+      // Add buttons for each category
+      categories.forEach(category => {
+        const button = document.createElement('button')
+        button.className = 'category-button'
+        button.textContent = category.Category_name
+        button.addEventListener('click', () => {
+          setActiveCategory(button)
+          loadPosts(category.Category_name)
+        })
+        categoriesFilter.appendChild(button)
+      })
+    })
+    .catch(error => {
+      console.error("Failed to load categories", error)
+    })
+}
+
+// Helper function to set active category button
+function setActiveCategory(activeButton) {
+  const buttons = document.querySelectorAll('.category-button')
+  buttons.forEach(button => {
+    button.classList.remove('active')
+  })
+  activeButton.classList.add('active')
+}

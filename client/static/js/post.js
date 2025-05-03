@@ -119,22 +119,19 @@ function loadCategories() {
 }
 
 function showSinglePost(postId) {
-    fetch(`/api/get-post/${postId}`, {
+    // Get the post details from the server
+    fetch('/api/get-post', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ post_id: postId }),
         credentials: 'include'
     })
         .then(response => response.json())
         .then(post => {
             const container = document.getElementById('singlePostContainer')
             container.innerHTML = ""
-
-            // Add back button
-            const backButton = document.createElement('div')
-            backButton.className = 'backButton'
-            backButton.textContent = '← Back to Posts'
-            backButton.addEventListener('click', () => {
-                showPage('home-page')
-            })
-            document.getElementById('single-post-page').appendChild(backButton)
 
             function createField(valueText) {
                 const field = document.createElement('div')
@@ -159,19 +156,8 @@ function showSinglePost(postId) {
             loadComments(postId)
 
             // Set up comment submission for this post
-            const submitBtn = document.getElementById('submitComment');
-            const commentContent = document.getElementById('commentContent');
-
-            commentContent.addEventListener('input', () => {
-                const content = commentContent.value.trim();
-                if (!content) {
-                    submitBtn.disabled = true;
-                } else {
-                    submitBtn.disabled = false;
-                }
-            });
-
-            submitBtn.onclick = () => submitComment(postId);
+            const submitBtn = document.getElementById('submitComment')
+            submitBtn.onclick = () => submitComment(postId)
 
             // Show the single post page
             showPage('single-post-page')
@@ -181,9 +167,13 @@ function showSinglePost(postId) {
         })
 }
 
-// Add function to load comments for a post
 function loadComments(postId) {
-    fetch(`/api/get-comments/${postId}`, {
+    fetch('/api/get-comments', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ post_id: postId }),
         credentials: 'include'
     })
         .then(response => response.json())
@@ -230,13 +220,11 @@ function loadComments(postId) {
         })
 }
 
-// Add function to submit a comment
 function submitComment(postId) {
-    const content = document.getElementById('commentContent').value
+    const content = document.getElementById('commentContent').value.trim()
 
     if (!content) {
-        document.getElementById('errorComment').classList.remove('hidden')
-        document.getElementById('errorComment').style.color = "red"
+        alert("Comment cannot be empty")
         return
     }
 

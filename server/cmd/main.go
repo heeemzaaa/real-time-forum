@@ -40,8 +40,8 @@ func main() {
 	http.HandleFunc("/api/signup", h.HandleSignUp)
 	http.HandleFunc("/api/login", h.HandleLogin)
 	http.HandleFunc("/api/logout" , h.HandleLogout)
-	http.HandleFunc("/api/get-post/", h.HandleGetSinglePost)
-	http.HandleFunc("/api/get-comments/", h.HandleGetComments)
+	http.HandleFunc("/api/get-post", h.HandleGetSinglePost)
+	http.HandleFunc("/api/get-comments", h.HandleGetComments)
 	http.HandleFunc("/api/add-comment", h.HandleAddComment)
 
 	// Catch-all: Serve index.html for all frontend routes

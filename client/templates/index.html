@@ -64,8 +64,16 @@
             </div>
         </div>
     </section>
+
     <div class="content-wrapper">
         <section id="home-page" style="display:none;">
+            <h1 id="filter">Categories</h1>
+            <div id="categoriesFilter" class="categories-filter">
+                <!-- Category buttons will be inserted here dynamically -->
+            </div>
+            <div id="postsContainer">
+                <!-- Posts will be inserted here -->
+            </div>
         </section>
     </div>
 
@@ -89,19 +97,19 @@
     <section id="profile-page" style="display:none;">
         <button id="update" onclick="showPage('home-page')">Update</button>
     </section>
-    
+
     <section id="single-post-page" style="display:none;">
         <div class="content-wrapper">
             <div id="singlePostContainer">
                 <!-- Single post will be displayed here -->
             </div>
-            
+
             <div id="commentsSection">
                 <h2>Comments</h2>
                 <div id="commentsList">
                     <!-- Comments will be displayed here -->
                 </div>
-                
+
                 <div id="addCommentForm">
                     <textarea id="commentContent" placeholder="Write a comment..." required></textarea>
                     <p id="errorComment" class="hidden">Please insert a valid comment !</p>

@@ -5,17 +5,30 @@ import (
 	"log"
 	"net/http"
 	g "real-time-forum/server/globalVar"
-	"strings"
 
 	"github.com/google/uuid"
 )
 
-// HandleGetComments retrieves all comments for a specific post
 func HandleGetComments(w http.ResponseWriter, r *http.Request) {
-	// Extract the post ID from the URL
-	postID := strings.TrimPrefix(r.URL.Path, "/api/get-comments/")
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
-	if postID == "" {
+	// Parse the request body to get the post ID
+	var requestBody struct {
+		PostID string `json:"post_id"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid request format"})
+		return
+	}
+
+	if requestBody.PostID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Post ID is required"})
@@ -27,7 +40,7 @@ func HandleGetComments(w http.ResponseWriter, r *http.Request) {
 		FROM comments c
 		JOIN users u ON c.user_id = u.id
 		WHERE c.post_id = ?
-		ORDER BY c.created_at ASC`, postID)
+		ORDER BY c.created_at ASC`, requestBody.PostID)
 
 	if err != nil {
 		log.Println("Failed to retrieve comments:", err)

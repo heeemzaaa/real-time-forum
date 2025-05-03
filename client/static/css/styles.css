@@ -513,3 +513,72 @@ p {
     margin-top: 300px;
     z-index: 100;
 }
+
+h1 {
+    color: #1609a5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 50px;
+}
+
+.categories-filter {
+    display: flex;
+    flex-wrap: nowrap;
+    /* Prevent wrapping to new lines */
+    gap: 10px;
+    margin-bottom: 30px;
+    overflow-x: auto;
+    /* Enable horizontal scrolling if needed */
+    padding: 5px 0;
+    /* Add some padding for better appearance */
+    justify-content: flex-start;
+    /* Align items to the start of the container */
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scrolling on iOS */
+    scrollbar-width: thin;
+    /* Thin scrollbar for Firefox */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.categories-filter::-webkit-scrollbar {
+    height: 5px;
+}
+
+/* Add scrollbar styling for better visibility */
+.categories-filter::-webkit-scrollbar-thumb {
+    background: #1609a5;
+    border-radius: 5px;
+}
+
+/* Make buttons more compact to fit more on a line */
+.category-button {
+    background-color: white;
+    color: #1609a5;
+    border: 2px solid #1609a5;
+    border-radius: 20px;
+    padding: 6px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    /* Prevent button text from wrapping */
+    flex-shrink: 0;
+    /* Prevent buttons from shrinking */
+    display: inline-block;
+    /* Better control over sizing */
+    min-width: 0;
+    /* Allow buttons to be as small as their content */
+    margin: 0 2px;
+    /* Small margin between buttons */
+}
+
+.category-button:hover {
+    background-color: #f0f0ff;
+}
+
+.category-button.active {
+    background-color: #1609a5;
+    color: white;
+}
