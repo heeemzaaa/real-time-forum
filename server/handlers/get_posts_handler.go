@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	g "real-time-forum/server/globalVar"
@@ -38,7 +39,7 @@ func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
 	if categoryFilter != "" {
 		// If a category filter is provided, get posts for that category
 		rows, err = g.DB.Query(`
-			SELECT p.id, p.title, p.content, p.created_at, c.category_name
+			SELECT p.id, p.title, p.content, p.created_at, c.category_name, p.user_id
 			FROM posts p
 			JOIN CategoriesByPost c ON p.id = c.post_id
 			WHERE c.category_name = ?
@@ -46,7 +47,7 @@ func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Otherwise, get all posts
 		rows, err = g.DB.Query(`
-			SELECT p.id, p.title, p.content, p.created_at, c.category_name
+			SELECT p.id, p.title, p.content, p.created_at, c.category_name, p.user_id
 			FROM posts p
 			LEFT JOIN CategoriesByPost c ON p.id = c.post_id
 		`)
@@ -64,10 +65,18 @@ func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var post g.Post
-		err = rows.Scan(&post.ID, &post.Title, &post.Content, &post.CreatedAt, &post.Categories)
+		err = rows.Scan(&post.ID, &post.Title, &post.Content, &post.CreatedAt, &post.Categories, &post.UserId)
 		if err != nil {
+			fmt.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to scan posts"})
+			return
+		}
+
+		err = g.DB.QueryRow("SELECT username FROM users WHERE id = ?" , post.UserId).Scan(&post.UserName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to fetch the username !"})
 			return
 		}
 		posts = append(posts, post)

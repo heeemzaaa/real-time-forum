@@ -11,7 +11,7 @@ html {
     font-family: 'Jost', sans-serif;
     background: white;
     background-attachment: fixed;
-    color: #1609a5;
+    color: #095aa5;
 }
 
 body {
@@ -22,7 +22,7 @@ body {
 #navbar {
     width: 100%;
     height: 80px;
-    background-color: #1609a5;
+    background-color: #095aa5;
     color: white;
     display: flex;
     justify-content: space-between;
@@ -40,11 +40,11 @@ body {
     font-size: 1.8em;
     font-weight: bold;
     cursor: pointer;
-    transition: color 0.3s ease;
+    transition: 0.5s ;
 }
 
 .logo:hover {
-    color: #030303;
+    transform: scale(1.2);
 }
 
 .user-menu {
@@ -90,7 +90,7 @@ body {
 }
 
 .dropdown-content div:hover {
-    background-color: #1609a5;
+    background-color: #095aa5;
     color: #fff;
 }
 
@@ -123,7 +123,7 @@ body {
     background-color: white;
     color: #333;
     border-radius: 8px;
-    border: 2px solid #1609a5;
+    border: 2px solid #095aa5;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     padding: 20px;
     display: flex;
@@ -141,7 +141,7 @@ body {
 
 /* Post Card Title */
 #postCard div:first-child {
-    color: #1609a5;
+    color: #095aa5;
     margin-bottom: 10px;
     font-size: 40px;
     font-weight: 600;
@@ -196,7 +196,7 @@ body {
 }
 
 label {
-    color: #1609a5;
+    color: #095aa5;
     font-size: 2.3em;
     justify-content: center;
     display: flex;
@@ -252,7 +252,7 @@ button {
     justify-content: center;
     display: block;
     color: #fff;
-    background: #1609a5;
+    background: #095aa5;
     font-size: 1em;
     font-weight: bold;
     margin-top: 30px;
@@ -269,7 +269,7 @@ button {
     margin: 10px auto;
     justify-content: center;
     display: block;
-    color: #1609a5;
+    color: #095aa5;
     background: white;
     font-size: 1em;
     font-weight: bold;
@@ -287,7 +287,7 @@ button:hover {
 
 .login {
     height: 650px;
-    background: #1609a5;
+    background: #095aa5;
     border-radius: 60% / 10%;
     transform: translateY(-180px);
     transition: .8s ease-in-out;
@@ -378,7 +378,7 @@ p {
     background-color: white;
     color: #333;
     border-radius: 8px;
-    border: 2px solid #1609a5;
+    border: 2px solid #095aa5;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     padding: 20px;
     display: flex;
@@ -389,7 +389,7 @@ p {
 }
 
 #singlePostContainer div:first-child {
-    color: #1609a5;
+    color: #095aa5;
     margin-bottom: 10px;
     font-size: 40px;
     font-weight: 600;
@@ -416,20 +416,31 @@ p {
     color: #888;
 }
 
+#singlePostContainer div:nth-child(5) {
+    margin-top: auto;
+    display: flex;
+    justify-content: center;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    font-size: 12px;
+    color: #888;
+}
+
+
 /* Comments Section Styling */
 #commentsSection {
     margin-top: 30px;
 }
 
 #commentsSection h2 {
-    color: #1609a5;
+    color: #095aa5;
     font-size: 24px;
     margin-bottom: 20px;
 }
 
 .commentCard {
     background-color: white;
-    border: 1px solid #1609a5;
+    border: 1px solid #095aa5;
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 15px;
@@ -466,7 +477,7 @@ p {
     justify-content: center;
     display: block;
     color: #fff;
-    background: #1609a5;
+    background: #095aa5;
     font-size: 1em;
     font-weight: bold;
     margin-top: 30px;
@@ -515,7 +526,7 @@ p {
 }
 
 h1 {
-    color: #1609a5;
+    color: #095aa5;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -526,13 +537,14 @@ h1 {
     display: flex;
     flex-wrap: nowrap;
     /* Prevent wrapping to new lines */
-    gap: 10px;
+    gap: 10px; 
     margin-bottom: 30px;
+    margin-top: 10px;
     overflow-x: auto;
     /* Enable horizontal scrolling if needed */
     padding: 5px 0;
     /* Add some padding for better appearance */
-    justify-content: flex-start;
+    justify-content: center;
     /* Align items to the start of the container */
     -webkit-overflow-scrolling: touch;
     /* Smooth scrolling on iOS */
@@ -547,15 +559,15 @@ h1 {
 
 /* Add scrollbar styling for better visibility */
 .categories-filter::-webkit-scrollbar-thumb {
-    background: #1609a5;
+    background: #095aa5;
     border-radius: 5px;
 }
 
 /* Make buttons more compact to fit more on a line */
 .category-button {
     background-color: white;
-    color: #1609a5;
-    border: 2px solid #1609a5;
+    color: #095aa5;
+    border: 2px solid #095aa5;
     border-radius: 20px;
     padding: 6px 20px;
     font-size: 14px;
@@ -579,6 +591,69 @@ h1 {
 }
 
 .category-button.active {
-    background-color: #1609a5;
+    background-color: #095aa5;
     color: white;
+}
+
+#icones-nav {
+    display: flex;
+    margin-top: 150px;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #a5a5a5;
+    border-radius: 8px;
+    padding: 5px 5px;
+}
+
+i {
+    font-size: 30px;
+    margin: 20px 10px;
+}
+
+#span-icone {
+    font-size: 30px;
+    margin: 10px;
+}
+
+#to-home,#to-post,#to-messages {
+    margin: 10px 40px;
+    cursor: pointer;
+    transition: 0.5s;
+}
+
+#to-home:hover {
+    background-color: white;
+    border-radius: 8px;
+    transform: scale(1.2);
+}
+
+#to-post:hover {
+    background-color: white;
+    border-radius: 8px;
+    transform: scale(1.2);
+}
+
+#to-messages:hover {
+    background-color: white;
+    border-radius: 8px;
+    transform: scale(1.2);
+}
+
+#logout {
+    margin: 5px 40px;
+    cursor: pointer;
+    transition: 0.5s;
+}
+
+#logout:hover {
+    transform: scale(1.2);
+}
+
+#span-logout {
+    font-size: 30px;
+    margin: 5px;
+}
+
+#namesDisplay {
+    
 }

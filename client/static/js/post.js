@@ -4,10 +4,11 @@ let newCategory = ""
 let category = ""
 let categoryStatus = false
 let contentStatus = false
+let titleStatus = false
 
 
 function validPost() {
-    if (categoryStatus && contentStatus) {
+    if (categoryStatus && contentStatus && titleStatus) {
         console.log(categoryStatus)
         console.log(contentStatus)
         document.getElementById('submit').disabled = false
@@ -25,6 +26,15 @@ for (let i = 0; i < options.length; i++) {
         categories.push(options[i].value);
     }
 }
+
+document.getElementById('title').addEventListener('input', function () {
+    if (document.getElementById('title').value === '') {
+        titleStatus = false
+    } else {
+        titleStatus = true
+    }
+    validPost()
+})
 
 document.getElementById('addCategory').addEventListener('click', function (event) {
     event.preventDefault()

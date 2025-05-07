@@ -1,4 +1,4 @@
-const pages = ['home-page', 'register-login-page', 'add-post-page', 'profile-page', 'single-post-page']
+const pages = ['home-page', 'register-login-page', 'add-post-page', 'profile-page', 'single-post-page', 'chat-page']
 
 pages.forEach(id => {
   document.getElementById(id).style.display = 'none'
@@ -12,7 +12,6 @@ window.addEventListener('DOMContentLoaded', () => {
     .then(response => response.json())
     .then(result => {
       if (result.message === "ok") {
-        document.getElementById('usernameDisplay').textContent = result.username + " " + "▼"
         showPage('home-page')
       } else {
         showPage('register-login-page')
@@ -37,6 +36,7 @@ function loadPosts(categoryFilter = null) {
   fetch('/api/get-posts', options)
     .then(response => response.json())
     .then(posts => {
+      console.log(posts)
       const postsContainer = document.getElementById('postsContainer')
       postsContainer.innerHTML = ""
 
@@ -73,11 +73,15 @@ function loadPosts(categoryFilter = null) {
         const createdDate = new Date(post.created_at);
         const formattedDate = `${createdDate.toLocaleDateString()} ${createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
+        const user = `By: ${post.user_name}`
+
+
         postCard.append(
           createField(post.Title),
           createField(post.Category),
           createField(post.Content),
-          createField(formattedDate)
+          createField(formattedDate),
+          createField(user)
         )
 
         postsContainer.append(postCard)
@@ -100,6 +104,12 @@ function showPage(pageId) {
     navbar.style.display = 'none';
   } else {
     navbar.style.display = 'flex';
+  }
+
+  if (pageId === 'home-page' || pageId === 'single-post-page') {
+    document.getElementById('icones-nav').style.display = 'flex'
+  } else {
+    document.getElementById('icones-nav').style.display = 'none'
   }
 
   if (pageId === 'home-page') {
@@ -164,3 +174,16 @@ function setActiveCategory(activeButton) {
   })
   activeButton.classList.add('active')
 }
+
+
+document.getElementById('to-home').addEventListener('click', function () {
+  showPage('home-page')
+})
+
+document.getElementById('to-post').addEventListener('click', function () {
+  showPage('add-post-page')
+})
+
+document.getElementById('to-messages').addEventListener('click', function () {
+  showPage('chat-page')
+})
