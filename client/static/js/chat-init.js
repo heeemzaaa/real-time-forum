@@ -1,4 +1,3 @@
-// Initialize WebSocket when user is logged in
 function initializeChat() {
     // Connect to websocket
     connectWebSocket();

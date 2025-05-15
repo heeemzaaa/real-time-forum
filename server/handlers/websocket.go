@@ -3,10 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"log"
-	"net"
 	"net/http"
-	g "real-time-forum/server/globalVar"
 	"time"
+
+	g "real-time-forum/server/globalVar"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -64,8 +64,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Broadcast to all clients about online status changes
 	BroadcastUserStatus()
 
-	// Handle disconnection
+	// Critical fix: Properly handle disconnection with defer
 	defer func() {
+		log.Printf("Cleaning up connection for user %s", username)
 		conn.Close()
 		DeleteConnection(userID, conn)
 		BroadcastUserStatus()
@@ -74,9 +75,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Set up ping timing
 	lastPing := time.Now()
 	pingInterval := 30 * time.Second
-
-	// Set read deadline to handle timeouts
-	conn.SetReadDeadline(time.Now().Add(pingInterval + 10*time.Second))
 
 	// Listen for messages
 	for {
@@ -87,44 +85,34 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			connection.WriteMu.Unlock()
 			if err != nil {
 				log.Println("Error sending ping:", err)
-				return
+				return // Exit the loop on ping error
 			}
 			lastPing = time.Now()
 		}
 
-		// Read the next message with a deadline
-		var message g.ChatMessage
-
-		// Set a short deadline so we can regularly check for ping intervals
-		conn.SetReadDeadline(time.Now().Add(time.Second))
-		err := conn.ReadJSON(&message)
-
-		if err != nil {
-			// Check if it's a timeout error (which is expected)
-			if websocket.IsUnexpectedCloseError(err,
-				websocket.CloseNormalClosure,
-				websocket.CloseGoingAway,
-				websocket.CloseNoStatusReceived) {
-
-				// Only log if it's not a timeout error
-				netErr, ok := err.(net.Error)
-				if !ok || !netErr.Timeout() {
-					log.Printf("Unexpected error reading WebSocket message: %v", err)
-					return
-				}
-
-				// If it's a timeout, just continue the loop to check for pings
-				continue
-			} else {
-				// Connection closed normally
-				return
-			}
-		}
-
-		// Reset the read deadline since we got a message
+		// Key fix: Handle read timeouts properly
+		// Set a longer read deadline
 		conn.SetReadDeadline(time.Now().Add(pingInterval + 10*time.Second))
 
-		// Set the sender ID and name from the session
+		// Read the next message
+		var message g.ChatMessage
+
+		// CRITICAL FIX: Handle ReadJSON errors properly to avoid the panic
+		err := conn.ReadJSON(&message)
+		if err != nil {
+			// Don't try to continue reading after an error
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseNormalClosure,
+				websocket.CloseGoingAway) {
+				log.Printf("WebSocket error: %v", err)
+			} else {
+				// Normal closure or timeout
+				log.Printf("WebSocket closed: %v", err)
+			}
+			return // Exit the loop on any read error
+		}
+
+		// Process the message normally...
 		message.SenderID = userID
 		message.SenderName = username
 		message.Timestamp = time.Now()
@@ -135,17 +123,16 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		// Find or create conversation
 		var conversationID string
 		err = g.DB.QueryRow(`
-			SELECT id FROM Conversations 
-			WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
-		`, message.SenderID, message.ReceiverID, message.ReceiverID, message.SenderID).Scan(&conversationID)
-
+            SELECT id FROM Conversations 
+            WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
+        `, message.SenderID, message.ReceiverID, message.ReceiverID, message.SenderID).Scan(&conversationID)
 		if err != nil {
 			// Create a new conversation
 			conversationID = uuid.New().String()
 			_, err = g.DB.Exec(`
-				INSERT INTO Conversations (id, user1_id, user2_id) 
-				VALUES (?, ?, ?)
-			`, conversationID, message.SenderID, message.ReceiverID)
+                INSERT INTO Conversations (id, user1_id, user2_id) 
+                VALUES (?, ?, ?)
+            `, conversationID, message.SenderID, message.ReceiverID)
 			if err != nil {
 				log.Println("Error creating conversation:", err)
 				continue
@@ -154,9 +141,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		// Insert message
 		_, err = g.DB.Exec(`
-			INSERT INTO Messages (id, conversation_id, sender_id, content) 
-			VALUES (?, ?, ?, ?)
-		`, messageID, conversationID, message.SenderID, message.Content)
+            INSERT INTO Messages (id, conversation_id, sender_id, content) 
+            VALUES (?, ?, ?, ?)
+        `, messageID, conversationID, message.SenderID, message.Content)
 		if err != nil {
 			log.Println("Error saving message:", err)
 			continue
@@ -174,6 +161,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				senderConn.WriteMu.Unlock()
 				if err != nil {
 					log.Println("Error sending confirmation to sender:", err)
+					// Don't close the whole connection for a single send error
 				}
 			}
 		}
@@ -190,6 +178,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				receiverConn.WriteMu.Unlock()
 				if err != nil {
 					log.Println("Error sending message to receiver:", err)
+					// Don't close the whole connection for a single send error
 				}
 			}
 		}
@@ -379,7 +368,6 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 		SELECT id FROM Conversations 
 		WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
 	`, currentUserID, requestBody.UserID, requestBody.UserID, currentUserID).Scan(&conversationID)
-
 	if err != nil {
 		// No conversation yet
 		w.Header().Set("Content-Type", "application/json")

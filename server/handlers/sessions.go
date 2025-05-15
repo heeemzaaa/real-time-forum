@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	g "real-time-forum/server/globalVar"
 	"time"
+
+	g "real-time-forum/server/globalVar"
 
 	"github.com/google/uuid"
 )
@@ -60,6 +61,7 @@ func CheckSession(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the cookie"})
 		return
 	}
 
@@ -69,6 +71,7 @@ func CheckSession(w http.ResponseWriter, r *http.Request) {
 	if err != nil || time.Now().After(expiration) {
 		log.Println(err)
 		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the database"})
 		return
 	}
 	w.WriteHeader(http.StatusOK)

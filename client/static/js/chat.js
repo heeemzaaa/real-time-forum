@@ -1,76 +1,214 @@
-// Global variables for chat functionality
 let socket = null;
 let currentChatUserId = null;
 let messagesLoaded = 0;
 let isLoadingMoreMessages = false;
 let hasMoreMessages = true;
 let onlineUsers = {}; // Stores online user IDs
-
-// Set up the chat page when it's shown
-function setupChatPage() {
-    // Load online users
-    loadOnlineUsers();
-
-    // Connect to WebSocket
-    connectWebSocket();
-
-    // Set up message loading on scroll
-    const messagesList = document.getElementById('messagesList');
-    messagesList.addEventListener('scroll', throttle(handleMessagesScroll, 500));
-}
+let reconnectAttempts = 0;
+let isConnecting = false; // Flag to prevent multiple connection attempts
+let maxReconnectAttempts = 5; // Maximum number of reconnection attempts
+let reconnectTimer = null;
 
 // Connect to the WebSocket server
 function connectWebSocket() {
-    if (socket !== null) {
-        // Close existing connection if there is one
-        socket.close();
+    // Clear any existing reconnect timer
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
     }
 
-    // Create WebSocket connection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/ws`;
+    // If already connecting, don't try again
+    if (isConnecting) {
+        console.log('Already attempting to connect, skipping duplicate attempt');
+        return;
+    }
 
-    socket = new WebSocket(wsUrl);
+    // If already connected and open, don't reconnect
+    if (socket !== null && socket.readyState === WebSocket.OPEN) {
+        console.log('WebSocket already connected');
+        return;
+    }
 
-    socket.onopen = function () {
-        console.log('WebSocket connection established');
-    };
+    // If we've exceeded max reconnect attempts, stop trying
+    if (reconnectAttempts >= maxReconnectAttempts) {
+        console.log(`Maximum reconnection attempts (${maxReconnectAttempts}) reached. Please reload the page to try again.`);
+        return;
+    }
 
-    socket.onmessage = function (event) {
-        const data = JSON.parse(event.data);
+    isConnecting = true;
 
-        // Check if this is a status update message
-        if (data.type === 'status_update') {
-            // Update our local cache of online users
-            onlineUsers = data.online;
-
-            // Update UI to reflect new online status
-            updateOnlineStatus();
-            return;
+    // Close existing connection if there is one
+    if (socket !== null) {
+        try {
+            // Only attempt to close if not already closed
+            if (socket.readyState !== WebSocket.CLOSED && socket.readyState !== WebSocket.CLOSING) {
+                socket.close();
+            }
+            socket = null;
+        } catch (e) {
+            console.log('Error closing previous connection:', e);
         }
+    }
 
-        // Otherwise it's a regular chat message
-        const message = data;
+    try {
+        // Create WebSocket connection
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/ws`;
 
-        // If this message is for the current chat, add it to the messages list
-        if (currentChatUserId && (message.sender_id === currentChatUserId || message.receiver_id === currentChatUserId)) {
-            addMessageToChat(message);
-            scrollToBottom();
-        }
+        console.log('Attempting to connect to WebSocket at:', wsUrl);
+        socket = new WebSocket(wsUrl);
 
-        // Always refresh the user list when receiving a message to update the order
-        loadOnlineUsers();
-    };
+        // Set a connection timeout
+        const connectionTimeout = setTimeout(() => {
+            if (socket && socket.readyState !== WebSocket.OPEN) {
+                console.log('WebSocket connection timed out');
+                try {
+                    if (socket.readyState !== WebSocket.CLOSED && socket.readyState !== WebSocket.CLOSING) {
+                        socket.close();
+                    }
+                } catch (e) {
+                    console.log('Error closing timed-out socket:', e);
+                }
+                isConnecting = false;
+                scheduleReconnect();
+            }
+        }, 10000); // 10 second timeout
 
-    socket.onclose = function () {
-        console.log('WebSocket connection closed');
-        // Try to reconnect after 5 seconds
-        setTimeout(connectWebSocket, 5000);
-    };
+        // Add explicit handling for pong messages
+        socket.onping = function () {
+            console.log('Received ping from server');
+        };
 
-    socket.onerror = function (error) {
-        console.error('WebSocket error:', error);
-    };
+        socket.onpong = function () {
+            console.log('Received pong from server');
+        };
+
+        socket.onopen = function () {
+            console.log('WebSocket connection established');
+            clearTimeout(connectionTimeout);
+            reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+            isConnecting = false;
+
+            // Send a test message to ensure connection is working
+            try {
+                socket.send(JSON.stringify({ type: 'connection_test' }));
+            } catch (e) {
+                console.log('Error sending test message:', e);
+            }
+        };
+
+        // Improved WebSocket message handling
+        socket.onmessage = function (event) {
+            try {
+                const data = JSON.parse(event.data);
+
+                // Check if this is a status update message
+                if (data.type === 'status_update') {
+                    // Update our local cache of online users
+                    onlineUsers = data.online;
+
+                    // Update UI to reflect new online status
+                    updateOnlineStatus();
+                    return;
+                }
+
+                const message = data;
+
+                if (currentChatUserId && (message.sender_id === currentChatUserId || message.receiver_id === currentChatUserId)) {
+                    addMessageToChat(message);
+                    scrollToBottom();
+                }
+
+                loadOnlineUsers();
+            } catch (e) {
+                console.error('Error processing message:', e);
+            }
+        };
+
+        // Add explicit ping/pong handling
+        socket.onping = function () {
+            console.log("Received ping from server");
+        };
+
+        socket.onpong = function () {
+            console.log("Received pong response");
+        };
+
+        socket.onclose = function (event) {
+            console.log('WebSocket connection closed. Code:', event.code, 'Reason:', event.reason);
+            clearTimeout(connectionTimeout);
+            isConnecting = false;
+
+            // Most WebSocket close events should trigger a reconnection attempt
+            if (event.code !== 1000) { // 1000 is normal closure
+                scheduleReconnect();
+            }
+        };
+
+        socket.onerror = function (error) {
+            console.error('WebSocket error:', error);
+            clearTimeout(connectionTimeout);
+            isConnecting = false;
+            // Always try to reconnect on error
+            scheduleReconnect();
+        };
+    } catch (e) {
+        console.error('Error creating WebSocket:', e);
+        isConnecting = false;
+        scheduleReconnect();
+    }
+}
+
+
+// Check if the user's session is still valid
+function checkSession(callback) {
+    fetch('/api/check-session', {
+        credentials: 'include'
+    })
+        .then(response => {
+            if (response.ok) {
+                return response.json().then(data => {
+                    console.log('Session is valid');
+                    callback(true);
+                });
+            } else {
+                console.log('Session is invalid');
+                callback(false);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking session:', error);
+            callback(false);
+        });
+}
+
+// Schedule a reconnection attempt with exponential backoff
+function scheduleReconnect() {
+    reconnectAttempts++;
+
+    if (reconnectAttempts > maxReconnectAttempts) {
+        console.log(`Maximum reconnection attempts (${maxReconnectAttempts}) reached. Please reload the page.`);
+        return;
+    }
+
+    const baseDelay = 1000; // 1 second
+    const maxDelay = 30000; // 30 seconds
+
+    // Calculate delay with exponential backoff and a bit of randomness
+    const delay = Math.min(maxDelay, baseDelay * Math.pow(1.5, reconnectAttempts)) +
+        (Math.random() * 1000);
+
+    console.log(`Scheduling reconnection attempt ${reconnectAttempts} in ${Math.round(delay)}ms`);
+
+    // Clear any existing timer
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+    }
+
+    reconnectTimer = setTimeout(function () {
+        console.log(`Executing reconnection attempt ${reconnectAttempts}`);
+        connectWebSocket();
+    }, delay);
 }
 
 // Update the UI to reflect online status
@@ -80,12 +218,18 @@ function updateOnlineStatus() {
         const userId = item.getAttribute('data-user-id');
         if (userId in onlineUsers) {
             item.classList.add('online');
-            item.querySelector('.user-status').classList.remove('offline-indicator');
-            item.querySelector('.user-status').classList.add('online-indicator');
+            const statusIndicator = item.querySelector('.user-status');
+            if (statusIndicator) {
+                statusIndicator.classList.remove('offline-indicator');
+                statusIndicator.classList.add('online-indicator');
+            }
         } else {
             item.classList.remove('online');
-            item.querySelector('.user-status').classList.remove('online-indicator');
-            item.querySelector('.user-status').classList.add('offline-indicator');
+            const statusIndicator = item.querySelector('.user-status');
+            if (statusIndicator) {
+                statusIndicator.classList.remove('online-indicator');
+                statusIndicator.classList.add('offline-indicator');
+            }
         }
     });
 }
@@ -95,13 +239,18 @@ function loadOnlineUsers() {
     fetch('/api/get-online-users', {
         credentials: 'include'
     })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.json();
+        })
         .then(users => {
             // Sort users by last message time (newest first)
             // For users with no messages, sort alphabetically
             users.sort((a, b) => {
-                const timeA = new Date(a.last_message).getTime();
-                const timeB = new Date(b.last_message).getTime();
+                const timeA = new Date(a.last_message || 0).getTime();
+                const timeB = new Date(b.last_message || 0).getTime();
 
                 if (timeA === 0 && timeB === 0) {
                     // Both have no messages, sort alphabetically
@@ -119,6 +268,8 @@ function loadOnlineUsers() {
             });
 
             const usersList = document.getElementById('usersList');
+            if (!usersList) return;
+
             usersList.innerHTML = '';
 
             users.forEach(user => {
@@ -230,17 +381,28 @@ function openChatWithUser(userId, username) {
     hasMoreMessages = true;
 
     // Update chat header
-    document.getElementById('chatHeader').textContent = username;
+    const chatHeader = document.getElementById('chatHeader');
+    if (chatHeader) {
+        chatHeader.textContent = username;
+    }
 
     // Clear existing messages
-    document.getElementById('messagesList').innerHTML = '';
+    const messagesList = document.getElementById('messagesList');
+    if (messagesList) {
+        messagesList.innerHTML = '';
+    }
 
     // Load initial messages
     loadMessages(0, 10);
 
     // Show the chat area
-    document.getElementById('emptyChat').style.display = 'none';
-    document.getElementById('chatArea').style.display = 'flex';
+    const emptyChat = document.getElementById('emptyChat');
+    const chatArea = document.getElementById('chatArea');
+
+    if (emptyChat && chatArea) {
+        emptyChat.style.display = 'none';
+        chatArea.style.display = 'flex';
+    }
 }
 
 // Load messages for the current chat
@@ -261,9 +423,13 @@ function loadMessages(offset, limit) {
         }),
         credentials: 'include'
     })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.json();
+        })
         .then(messages => {
-            console.log(messages)
             if (messages.length === 0) {
                 hasMoreMessages = false;
                 isLoadingMoreMessages = false;
@@ -271,13 +437,16 @@ function loadMessages(offset, limit) {
             }
 
             const messagesList = document.getElementById('messagesList');
+            if (!messagesList) {
+                isLoadingMoreMessages = false;
+                return;
+            }
+
             const scrollPos = messagesList.scrollHeight;
-            let temp = []
 
             // Add messages to the chat
             messages.forEach(message => {
-                temp.push(message.id)
-                if (offset > 0) { 
+                if (offset > 0) {
                     // Prepend older messages
                     prependMessageToChat(message);
                 } else {
@@ -308,6 +477,8 @@ function loadMessages(offset, limit) {
 // Add a message to the chat
 function addMessageToChat(message) {
     const messagesList = document.getElementById('messagesList');
+    if (!messagesList) return;
+
     const messageItem = createMessageElement(message);
     messagesList.appendChild(messageItem);
 }
@@ -315,6 +486,8 @@ function addMessageToChat(message) {
 // Prepend a message to the chat (for loading older messages)
 function prependMessageToChat(message) {
     const messagesList = document.getElementById('messagesList');
+    if (!messagesList) return;
+
     const messageItem = createMessageElement(message);
     if (messagesList.firstChild) {
         messagesList.insertBefore(messageItem, messagesList.firstChild);
@@ -348,11 +521,30 @@ function createMessageElement(message) {
 
 // Send a message
 function sendMessage() {
-    if (!currentChatUserId || !socket || socket.readyState !== WebSocket.OPEN) return;
+    if (!currentChatUserId) return;
+
+    // Double-check WebSocket is connected
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        console.log("WebSocket not connected, attempting to reconnect...");
+        connectWebSocket();
+
+        // Let the user know we're trying to reconnect
+        const messagesList = document.getElementById('messagesList');
+        if (messagesList) {
+            const reconnectingMessage = document.createElement('div');
+            reconnectingMessage.className = 'system-message';
+            reconnectingMessage.textContent = 'Connection lost. Reconnecting...';
+            messagesList.appendChild(reconnectingMessage);
+            scrollToBottom();
+        }
+
+        return;
+    }
 
     const messageInput = document.getElementById('messageInput');
-    const content = messageInput.value.trim();
+    if (!messageInput) return;
 
+    const content = messageInput.value.trim();
     if (!content) return;
 
     const message = {
@@ -360,29 +552,35 @@ function sendMessage() {
         content: content
     };
 
-    // Send to server
-    socket.send(JSON.stringify(message));
+    try {
+        // Send to server
+        socket.send(JSON.stringify(message));
 
-    // // Also display message in our own chat (immediately, don't wait for server)
-    // const currentUsername = document.getElementById('usernameDisplay').textContent;
-    // const selfMessage = {
-    //     content: content,
-    //     username: currentUsername,
-    //     sender_name: currentUsername,
-    //     timestamp: new Date(),
-    //     sender_id: "self" // This will be replaced by the server response
-    // };
-    // // Add to own chat
-    // addMessageToChat(selfMessage);
-    // scrollToBottom();
+        // Clear the input
+        messageInput.value = '';
+    } catch (e) {
+        console.error("Error sending message:", e);
 
-    // // Clear the input
-    messageInput.value = '';
+        // Show error message to user
+        const messagesList = document.getElementById('messagesList');
+        if (messagesList) {
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'system-message error';
+            errorMessage.textContent = 'Failed to send message. Please try again.';
+            messagesList.appendChild(errorMessage);
+            scrollToBottom();
+        }
+
+        // Try to reconnect
+        connectWebSocket();
+    }
 }
+
 
 // Handle scroll event to load more messages
 function handleMessagesScroll() {
     const messagesList = document.getElementById('messagesList');
+    if (!messagesList) return;
 
     // If we're near the top and have more messages to load
     if (messagesList.scrollTop < 50 && hasMoreMessages && !isLoadingMoreMessages) {
@@ -393,6 +591,8 @@ function handleMessagesScroll() {
 // Scroll the messages list to the bottom
 function scrollToBottom() {
     const messagesList = document.getElementById('messagesList');
+    if (!messagesList) return;
+
     messagesList.scrollTop = messagesList.scrollHeight;
 }
 
@@ -409,56 +609,145 @@ function throttle(func, delay) {
     };
 }
 
-// Set up event listeners
-// Update showPage function to initialize chat when needed
-window.addEventListener('DOMContentLoaded', function () {
-    // Get original showPage function
-    const originalShowPage = window.showPage;
+// Set up chat page when it's shown
+function setupChatPage() {
+    // Reset reconnection attempts
+    reconnectAttempts = 0;
 
-    // Override showPage function to also initialize chat when needed
-    window.showPage = function (pageId) {
-        // Call original function
-        originalShowPage(pageId);
+    // Connect to WebSocket first
+    connectWebSocket();
 
-        // Initialize chat when showing home page for the first time
-        if (pageId === 'home-page') {
-            initializeChat();
+    // Then load online users 
+    setTimeout(function () {
+        loadOnlineUsers();
+    }, 1000);
+
+    // Set up message loading on scroll
+    const messagesList = document.getElementById('messagesList');
+    if (messagesList) {
+        // Remove any existing listeners first to avoid duplicates
+        messagesList.removeEventListener('scroll', throttle(handleMessagesScroll, 500));
+        messagesList.addEventListener('scroll', throttle(handleMessagesScroll, 500));
+    }
+}
+
+// Initialize WebSocket when user is logged in
+function initializeChat() {
+    // Reset reconnection attempts
+    reconnectAttempts = 0;
+
+    // Try to connect to websocket
+    connectWebSocket();
+
+    // Load online users for the home page sidebar after a delay
+    setTimeout(function () {
+        loadOnlineUsers();
+    }, 1000);
+}
+
+// Set a flag to track initialization (prevent duplicate event handlers)
+if (typeof window.chatInitialized === 'undefined') {
+    window.chatInitialized = true;
+
+    // Clean up any existing handlers
+    function setupEventListeners() {
+        // Handle send button click
+        const sendButton = document.getElementById('sendButton');
+        if (sendButton) {
+            sendButton.removeEventListener('click', sendMessage);
+            sendButton.addEventListener('click', sendMessage);
         }
-    };
-});
 
-// Set up event listeners
-document.addEventListener('DOMContentLoaded', function () {
-    // Handle send button click (keep for backward compatibility)
-    document.getElementById('sendButton').addEventListener('click', sendMessage);
+        // Handle send icon click
+        const sendIcon = document.getElementById('sendIcon');
+        if (sendIcon) {
+            sendIcon.removeEventListener('click', sendMessage);
+            sendIcon.addEventListener('click', sendMessage);
+        }
 
-    document.getElementById('sendIcon').addEventListener('click', sendMessage);
+        // Handle enter key in message input
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            messageInput.removeEventListener('keypress', handleKeyPress);
+            messageInput.addEventListener('keypress', handleKeyPress);
+        }
 
+        // Register navigation event handlers
+        const toMessages = document.getElementById('to-messages');
+        if (toMessages) {
+            toMessages.removeEventListener('click', handleToMessages);
+            toMessages.addEventListener('click', handleToMessages);
+        }
 
-    // Handle send icon click
-    document.getElementById('sendIcon').addEventListener('click', sendMessage);
+        const toHome = document.getElementById('to-home');
+        if (toHome) {
+            toHome.removeEventListener('click', handleToHome);
+            toHome.addEventListener('click', handleToHome);
+        }
+    }
 
-    // Handle enter key in message input
-    document.getElementById('messageInput').addEventListener('keypress', function (e) {
+    // Key press handler for message input
+    function handleKeyPress(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             sendMessage();
         }
-    });
+    }
 
-    // Show setup chat page when chat page is displayed
-    document.getElementById('to-messages').addEventListener('click', function () {
+    // Handle click on messages icon
+    function handleToMessages() {
         setupChatPage();
-    });
+    }
 
-    // Check if we should initialize when showing home page
-    document.getElementById('to-home').addEventListener('click', function () {
+    // Handle click on home icon
+    function handleToHome() {
         // Connect to websocket if not already connected
-        if (socket === null || socket.readyState !== WebSocket.OPEN) {
-            connectWebSocket();
-        }
+        connectWebSocket();
 
         // Load online users for the sidebar
-        loadOnlineUsers();
+        setTimeout(function () {
+            loadOnlineUsers();
+        }, 1000);
+    }
+
+    // Set up event listeners when DOM is loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupEventListeners);
+    } else {
+        setupEventListeners();
+    }
+
+    // Override showPage to initialize chat when needed
+    window.addEventListener('load', function () {
+        // Store the original function
+        const originalShowPage = window.showPage;
+
+        // Override it with our custom version
+        window.showPage = function (pageId) {
+            // Call the original showPage function
+            originalShowPage(pageId);
+
+            // If showing home page, initialize chat
+            if (pageId === 'home-page') {
+                // Reset reconnection attempts when actively changing pages
+                reconnectAttempts = 0;
+
+                // Delay to ensure DOM is fully loaded
+                setTimeout(function () {
+                    initializeChat();
+                }, 1000);
+            }
+
+            // If showing chat page, set it up
+            if (pageId === 'chat-page') {
+                // Reset reconnection attempts when actively changing pages
+                reconnectAttempts = 0;
+
+                // Delay to ensure DOM is fully loaded
+                setTimeout(function () {
+                    setupChatPage();
+                }, 1000);
+            }
+        };
     });
-});
+}
