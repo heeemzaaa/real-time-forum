@@ -34,15 +34,20 @@ func main() {
 
 	// API endpoint
 	http.HandleFunc("/api/check-session", h.CheckSession)
-	http.HandleFunc("/api/get-posts" , h.HandleGetPosts)
-	http.HandleFunc("/api/get-categories" , h.HandleCategories)
+	http.HandleFunc("/api/get-posts", h.HandleGetPosts)
+	http.HandleFunc("/api/get-categories", h.HandleCategories)
 	http.HandleFunc("/api/newpost", h.PostHandler)
 	http.HandleFunc("/api/signup", h.HandleSignUp)
 	http.HandleFunc("/api/login", h.HandleLogin)
-	http.HandleFunc("/api/logout" , h.HandleLogout)
+	http.HandleFunc("/api/logout", h.HandleLogout)
 	http.HandleFunc("/api/get-post", h.HandleGetSinglePost)
 	http.HandleFunc("/api/get-comments", h.HandleGetComments)
 	http.HandleFunc("/api/add-comment", h.HandleAddComment)
+
+	// New Chat API endpoints
+	http.HandleFunc("/api/ws", h.HandleWebSocket)
+	http.HandleFunc("/api/get-online-users", h.HandleGetOnlineUsers)
+	http.HandleFunc("/api/get-messages", h.HandleGetMessages)
 
 	// Catch-all: Serve index.html for all frontend routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

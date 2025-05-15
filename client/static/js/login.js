@@ -55,6 +55,7 @@ document.getElementById('loginBtn').addEventListener('click', function (event) {
                 document.getElementById('falsePaswd').classList.remove('hidden')
                 document.getElementById('falsePaswd').style.color = 'red'
             } else {
+                document.getElementById('usernameDisplay').textContent = result.username
                 showPage('home-page')
             }
         })

@@ -17,7 +17,7 @@
             <div id="logout">
                 <i class="fa-solid fa-right-to-bracket"></i>
             </div>
-            
+            <div id="usernameDisplay" class="hidden"></div>
         </div>
         <script src="/static/js/logout.js"></script>
     </nav>
@@ -81,12 +81,23 @@
 
     <div class="content-wrapper">
         <section id="home-page" style="display:none;">
-            <h1 id="filter">Categories</h1>
-            <div id="categoriesFilter" class="categories-filter">
-                <!-- Category buttons will be inserted here dynamically -->
-            </div>
-            <div id="postsContainer">
-                <!-- Posts will be inserted here -->
+            <div class="home-content">
+                <div class="main-content">
+                    <h1 id="filter">Categories</h1>
+                    <div id="categoriesFilter" class="categories-filter">
+                        <!-- Category buttons will be inserted here dynamically -->
+                    </div>
+                    <div id="postsContainer">
+                        <!-- Posts will be inserted here -->
+                    </div>
+                </div>
+
+                <div id="homePageSidebar">
+                    <h2>Chat</h2>
+                    <div id="homePageUsersList">
+                        <!-- Users will be inserted here dynamically -->
+                    </div>
+                </div>
             </div>
         </section>
     </div>
@@ -134,11 +145,46 @@
     </section>
 
     <section id="chat-page" style="display: none;">
-        <nav id="namesDisplay">
-            
-        </nav>
+        <div id="chat-container">
+            <!-- Users list sidebar -->
+            <div id="usersListContainer">
+                <div id="usersListHeader">Users</div>
+                <div id="usersList">
+                    <!-- Users will be dynamically added here -->
+                </div>
+            </div>
+
+            <!-- Chat area -->
+            <div id="chatContainer">
+                <div id="chatHeader">Select a user to start chatting</div>
+
+                <!-- Empty state message -->
+                <div id="emptyChat">
+                    <p>Select a user from the list to start a conversation</p>
+                </div>
+
+                <!-- Chat area with messages -->
+                <div id="chatArea" style="display: none;">
+                    <div id="messagesList">
+                        <!-- Messages will be dynamically added here -->
+                    </div>
+
+                    <!-- Message input area -->
+                    <div id="sendMessageForm">
+                        <div class="message-input-container">
+                            <textarea id="messageInput" placeholder="Type a message..."></textarea>
+                            <i class="fa-solid fa-paper-plane send-icon" id="sendIcon"></i>
+                        </div>
+                        <button id="sendButton" style="display: none;">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </section>
+
     <script src="/static/js/index.js"></script>
+    <script src="/static/js/chat.js"></script>
+    <script src="/static/js/chat-init.js"></script>
 </body>
 
 </html>

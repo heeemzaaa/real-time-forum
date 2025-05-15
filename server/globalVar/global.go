@@ -3,7 +3,10 @@ package globalVar
 import (
 	"database/sql"
 	"html/template"
+	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type User struct {
@@ -51,6 +54,29 @@ type PostCategory struct {
 	CategoryId string `db:"category_id" json:"category_id"`
 }
 
+type Connection struct {
+	Conn     *websocket.Conn
+	UserID   string
+	Username string
+	WriteMu  sync.Mutex // Add a mutex for each connection to protect writes
+}
+
+type ChatMessage struct {
+	SenderID   string    `json:"sender_id"`
+	SenderName string    `json:"sender_name"`
+	ReceiverID string    `json:"receiver_id"`
+	Content    string    `json:"content"`
+	Timestamp  time.Time `json:"timestamp"`
+}
+
+type Message struct {
+	ID        string    `json:"id"`
+	SenderID  string    `json:"sender_id"`
+	Username  string    `json:"username"`
+	Content   string    `json:"content"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
 var (
 	Tpl               *template.Template
 	DB                *sql.DB
@@ -59,4 +85,6 @@ var (
 	SliceOfCategories []Categories
 	Comments          []Comment
 	ReserveCategories []string
+	ActiveConnections = make(map[string][]*Connection)
+	ActiveConnectionsMutex sync.RWMutex
 )
