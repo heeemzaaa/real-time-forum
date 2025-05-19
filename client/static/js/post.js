@@ -1,33 +1,42 @@
-let select = document.getElementById('categories')
+const select = document.getElementById('categories');
+const addCategory = document.getElementById('addCategory');
+const custom = document.getElementById('custom');
+const title = document.getElementById('title');
+// const selectCategories = document.getElementById('categories');
+const content = document.getElementById('content');
+const submit = document.getElementById('submit');
+const categoryError = document.getElementById('categoryError');
 let options = select.options;
-let newCategory = ""
-let category = ""
-let categoryStatus = false
-let contentStatus = false
-let titleStatus = false
+let newCategory = "";
+let category = "";
+let categoryStatus = false;
+let contentStatus = false;
+let titleStatus = false;
+let categories = [];
+
 
 
 function validPost() {
     if (categoryStatus && contentStatus && titleStatus) {
-        console.log(categoryStatus)
-        console.log(contentStatus)
+        // console.log(categoryStatus)
+        // console.log(contentStatus)
         document.getElementById('submit').disabled = false
     } else {
-        console.log(categoryStatus)
-        console.log(contentStatus)
+        // console.log(categoryStatus)
+        // console.log(contentStatus)
         document.getElementById('submit').disabled = true
     }
 }
 
 
-let categories = [];
+let categoriesSlice = [];
 for (let i = 0; i < options.length; i++) {
     if (!options[i].disabled) {
-        categories.push(options[i].value);
+        categoriesSlice.push(options[i].value);
     }
 }
 
-document.getElementById('title').addEventListener('input', function () {
+title.addEventListener('input', function () {
     if (document.getElementById('title').value === '') {
         titleStatus = false
     } else {
@@ -36,39 +45,39 @@ document.getElementById('title').addEventListener('input', function () {
     validPost()
 })
 
-document.getElementById('addCategory').addEventListener('click', function (event) {
+addCategory.addEventListener('click', function (event) {
     event.preventDefault()
-    newCategory = document.getElementById('custom').value
+    newCategory = custom.value
     let add = true
-    for (let i = 0; i < categories.length; i++) {
-        if (newCategory === categories[i]) {
+    for (let i = 0; i < categoriesSlice.length; i++) {
+        if (newCategory === categoriesSlice[i]) {
             add = false
             break
         }
     }
     if (add) {
-        categories.push(newCategory)
-        document.getElementById('categoryError').classList.add('hidden')
+        categoriesSlice.push(newCategory)
+        categoryError.classList.add('hidden')
         let option = document.createElement('option')
         option.value = newCategory
         option.textContent = newCategory
-        select.appendChild(option)
+        selectCategories.appendChild(option)
     } else {
-        document.getElementById('categoryError').classList.remove('hidden')
-        document.getElementById('categoryError').style.color = 'red'
+        categoryError.classList.remove('hidden')
+        categoryError.style.color = 'red'
     }
 })
 
 select.addEventListener('change', function (event) {
     let selectedCategory = event.target.value;
+    categories.push(selectedCategory)
     categoryStatus = true
     validPost()
 })
 
-document.getElementById('content').addEventListener('input', function () {
-    let content = document.getElementById('content').value
+content.addEventListener('input', function () {
     let p = document.getElementById('contentError')
-    if (content.length < 3 || content.length > 500) {
+    if (content.value.length < 3 || content.value.length > 500) {
         p.classList.remove('hidden')
         p.style.color = 'red'
         contentStatus = false
@@ -79,14 +88,24 @@ document.getElementById('content').addEventListener('input', function () {
     validPost()
 })
 
-document.getElementById('submit').addEventListener('click', function (event) {
+submit.addEventListener('click', function (event) {
     event.preventDefault()
+    addPost()
 
+    title.value = ""
+    categories = []
+    content.value = ""
+    custom.value = ""
+})
+
+function addPost() {
     const postData = {
-        Title: document.getElementById('title').value,
-        Category: document.getElementById('categories').value,
-        Content: document.getElementById('content').value
+        title: title.value,
+        categories: categories,
+        content: content.value
     }
+
+    console.log(postData);
 
     fetch('api/newpost', {
         method: 'POST',
@@ -100,31 +119,6 @@ document.getElementById('submit').addEventListener('click', function (event) {
             showPage('home-page')
         }).catch((error) => {
             console.error('Error in the post:', error)
-        })
-    document.getElementById('title').value = ""
-    document.getElementById('categories').value = ""
-    document.getElementById('content').value = ""
-    document.getElementById('custom').value = ""
-})
-
-function loadCategories() {
-    fetch('/api/get-categories', {
-        credentials: 'include'
-    })
-        .then(response => response.json())
-        .then(result => {
-            console.log(result)
-            select.innerHTML = '<option value="" disabled selected>Choose your category</option>'
-            result.forEach(category => {
-                categories.push(category.Category_name)
-                let option = document.createElement('option')
-                option.value = category.Category_name
-                option.textContent = category.Category_name
-                select.appendChild(option)
-            })
-        })
-        .catch((error) => {
-            console.log('Error:', error)
         })
 }
 
@@ -155,10 +149,15 @@ function showSinglePost(postId) {
             const createdDate = new Date(post.created_at);
             const formattedDate = `${createdDate.toLocaleDateString()} ${createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
+            let Categories = post.categories
+            console.log(Categories);
+            
+
+
             container.append(
-                createField(post.Title),
-                createField(post.Category),
-                createField(post.Content),
+                createField(post.title),
+                createField(Categories),
+                createField(post.content),
                 createField(formattedDate)
             )
 

@@ -25,7 +25,7 @@ function connectWebSocket() {
 
     // If already connected and open, don't reconnect
     if (socket !== null && socket.readyState === WebSocket.OPEN) {
-        console.log('WebSocket already connected');
+        // console.log('WebSocket already connected');
         return;
     }
 
@@ -246,12 +246,11 @@ function loadOnlineUsers() {
             return response.json();
         })
         .then(users => {
-            // Sort users by last message time (newest first)
-            // For users with no messages, sort alphabetically
+            // console.log(users);
+
             users.sort((a, b) => {
                 const timeA = new Date(a.last_message || 0).getTime();
                 const timeB = new Date(b.last_message || 0).getTime();
-
                 if (timeA === 0 && timeB === 0) {
                     // Both have no messages, sort alphabetically
                     return a.username.localeCompare(b.username);
@@ -273,6 +272,7 @@ function loadOnlineUsers() {
             usersList.innerHTML = '';
 
             users.forEach(user => {
+
                 const userItem = document.createElement('div');
                 userItem.classList.add('user-item');
                 userItem.setAttribute('data-user-id', user.id);
@@ -303,7 +303,6 @@ function loadOnlineUsers() {
                     // Open chat with this user
                     openChatWithUser(user.id, user.username);
                 });
-
                 usersList.appendChild(userItem);
             });
 
@@ -317,62 +316,68 @@ function loadOnlineUsers() {
 
 // Update the users list on the home page
 function updateHomePageUsersList(users) {
+    // Get reference to the users list container
     const homePageUsersList = document.getElementById('homePageUsersList');
     if (!homePageUsersList) return;
 
+    // Clear current list
     homePageUsersList.innerHTML = '';
 
+    // Split users into online and offline groups
     const onlineUsers = users.filter(user => user.is_online);
     const offlineUsers = users.filter(user => !user.is_online);
 
     // Add section for online users
     if (onlineUsers.length > 0) {
+        // Create section header
         const onlineSection = document.createElement('div');
         onlineSection.className = 'users-section';
         onlineSection.innerHTML = '<h3>Online Users</h3>';
         homePageUsersList.appendChild(onlineSection);
 
-        onlineUsers.forEach(user => {
-            const userItem = document.createElement('div');
-            userItem.className = 'home-user-item online';
-            userItem.innerHTML = `
-        <div class="user-status online-indicator"></div>
-        <div class="user-name">${user.username}</div>
-      `;
-            userItem.addEventListener('click', () => {
-                showPage('chat-page');
-                setTimeout(() => {
-                    openChatWithUser(user.id, user.username);
-                }, 100);
-            });
-            homePageUsersList.appendChild(userItem);
-        });
+        // Add each online user
+        onlineUsers.forEach(user => createUserItem(user, true, homePageUsersList));
     }
 
     // Add section for offline users
     if (offlineUsers.length > 0) {
+        // Create section header
         const offlineSection = document.createElement('div');
         offlineSection.className = 'users-section';
         offlineSection.innerHTML = '<h3>Offline Users</h3>';
         homePageUsersList.appendChild(offlineSection);
 
-        offlineUsers.forEach(user => {
-            const userItem = document.createElement('div');
-            userItem.className = 'home-user-item';
-            userItem.innerHTML = `
-        <div class="user-status offline-indicator"></div>
-        <div class="user-name">${user.username}</div>
-      `;
-            userItem.addEventListener('click', () => {
-                showPage('chat-page');
-                setTimeout(() => {
-                    openChatWithUser(user.id, user.username);
-                }, 100);
-            });
-            homePageUsersList.appendChild(userItem);
-        });
+        // Add each offline user
+        offlineUsers.forEach(user => createUserItem(user, false, homePageUsersList));
     }
 }
+
+/**
+ * Creates a user item element and appends it to the container
+ * @param {Object} user - User object
+ * @param {boolean} isOnline - Whether the user is online
+ * @param {HTMLElement} container - Container to append the user item to
+ */
+function createUserItem(user, isOnline, container) {
+    const userItem = document.createElement('div');
+    userItem.className = `home-user-item ${isOnline ? 'online' : ''}`;
+
+    userItem.innerHTML = `
+        <div class="user-status ${isOnline ? 'online-indicator' : 'offline-indicator'}"></div>
+        <div class="user-name">${user.username}</div>
+    `;
+
+    // Add click event to open chat with this user
+    userItem.addEventListener('click', () => {
+        showPage('chat-page');
+        setTimeout(() => {
+            openChatWithUser(user.id, user.username);
+        }, 100);
+    });
+
+    container.appendChild(userItem);
+}
+
 
 // Open chat with a specific user
 function openChatWithUser(userId, username) {

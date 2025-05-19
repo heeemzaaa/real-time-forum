@@ -1,57 +1,28 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	g "real-time-forum/server/globalVar"
 )
 
 func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
-	// Set headers
+	// Set content type header
 	w.Header().Set("Content-Type", "application/json")
 
-	var categoryFilter string
-
-	// Handle different HTTP methods
-	if r.Method == "POST" {
-		// For POST requests, get category filter from request body
-		var requestBody struct {
-			Category string `json:"category"`
-		}
-
-		err := json.NewDecoder(r.Body).Decode(&requestBody)
-		if err != nil {
-			log.Println("Error parsing request body:", err)
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"message": "Invalid request format"})
-			return
-		}
-
-		categoryFilter = requestBody.Category
+	// Validate request method
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Method not allowed"})
+		return
 	}
 
-	var rows *sql.Rows
-	var err error
-
-	if categoryFilter != "" {
-		// If a category filter is provided, get posts for that category
-		rows, err = g.DB.Query(`
-			SELECT p.id, p.title, p.content, p.created_at, c.category_name, p.user_id
-			FROM posts p
-			JOIN CategoriesByPost c ON p.id = c.post_id
-			WHERE c.category_name = ?
-		`, categoryFilter)
-	} else {
-		// Otherwise, get all posts
-		rows, err = g.DB.Query(`
-			SELECT p.id, p.title, p.content, p.created_at, c.category_name, p.user_id
-			FROM posts p
-			LEFT JOIN CategoriesByPost c ON p.id = c.post_id
-		`)
-	}
+	// First, get all posts
+	rows, err := g.DB.Query(`
+		SELECT p.id, p.title, p.content, p.created_at, p.user_id
+		FROM posts p
+	`)
 
 	if err != nil {
 		log.Println("Failed to retrieve posts:", err)
@@ -61,39 +32,80 @@ func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	var posts []g.Post
+	// Create slice to store posts
+	posts := []g.Post{}
 
+	// Iterate through result rows
 	for rows.Next() {
 		var post g.Post
-		err = rows.Scan(&post.ID, &post.Title, &post.Content, &post.CreatedAt, &post.Categories, &post.UserId)
+		err = rows.Scan(&post.ID, &post.Title, &post.Content, &post.CreatedAt, &post.UserId)
 		if err != nil {
-			fmt.Println(err)
+			log.Println("Failed to scan post row:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to scan posts"})
 			return
 		}
 
-		err = g.DB.QueryRow("SELECT username FROM users WHERE id = ?" , post.UserId).Scan(&post.UserName)
+		// Get username for each post
+		err = g.DB.QueryRow("SELECT username FROM users WHERE id = ?", post.UserId).Scan(&post.UserName)
 		if err != nil {
+			log.Println("Failed to fetch username:", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to fetch the username !"})
+			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to fetch the username!"})
 			return
 		}
+
+		// Get categories for this post
+		categoryRows, err := g.DB.Query("SELECT category_name FROM CategoriesByPost WHERE post_id = ?", post.ID)
+		if err != nil {
+			log.Println("Failed to fetch categories:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to fetch categories"})
+			return
+		}
+		defer categoryRows.Close()
+
+		for categoryRows.Next() {
+			var category string
+			if err := categoryRows.Scan(&category); err != nil {
+				log.Println("Failed to scan category:", err)
+				continue
+			}
+			post.Categories = append(post.Categories, category)
+		}
+
 		posts = append(posts, post)
 	}
 
-	// Reverse order if you want latest posts first
-	var reversedPosts []g.Post
-	for i := len(posts) - 1; i >= 0; i-- {
-		reversedPosts = append(reversedPosts, posts[i])
+	// Check for errors from rows.Next()
+	if err = rows.Err(); err != nil {
+		log.Println("Error iterating over rows:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error processing posts"})
+		return
 	}
 
-	json.NewEncoder(w).Encode(reversedPosts)
+	// Reverse order to show latest posts first
+	reversedPosts := make([]g.Post, len(posts))
+	for i, j := 0, len(posts)-1; j >= 0; i, j = i+1, j-1 {
+		reversedPosts[i] = posts[j]
+	}
+
+	// Return posts as JSON response
+	if err := json.NewEncoder(w).Encode(reversedPosts); err != nil {
+		log.Println("Failed to encode posts to JSON:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to encode response"})
+	}
 }
 
 func HandleGetSinglePost(w http.ResponseWriter, r *http.Request) {
+	// Set content type header consistently
+	w.Header().Set("Content-Type", "application/json")
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Method not allowed"})
 		return
 	}
 
@@ -104,40 +116,67 @@ func HandleGetSinglePost(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid request format"})
 		return
 	}
 
 	if requestBody.PostID == "" {
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Post ID is required"})
 		return
 	}
 
+	// Get the post details
 	var post g.Post
-	err = g.DB.QueryRow("SELECT id, title, content, created_at FROM posts WHERE id = ?", requestBody.PostID).Scan(
-		&post.ID, &post.Title, &post.Content, &post.CreatedAt)
+	err = g.DB.QueryRow(`
+		SELECT p.id, p.title, p.content, p.created_at, p.user_id
+		FROM posts p
+		WHERE p.id = ?
+	`, requestBody.PostID).Scan(&post.ID, &post.Title, &post.Content, &post.CreatedAt, &post.UserId)
 
 	if err != nil {
 		log.Println("Failed to retrieve post:", err)
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to retrieve post"})
 		return
 	}
 
-	// Get the category for this post
-	err = g.DB.QueryRow("SELECT category_name FROM CategoriesByPost WHERE post_id = ?", post.ID).Scan(&post.Categories)
+	// Get username for the post
+	err = g.DB.QueryRow("SELECT username FROM users WHERE id = ?", post.UserId).Scan(&post.UserName)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
+		log.Println("Failed to fetch username:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to retrieve category"})
+		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to fetch the username!"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	// Get categories for this post
+	categoryRows, err := g.DB.Query("SELECT category_name FROM CategoriesByPost WHERE post_id = ?", post.ID)
+	if err != nil {
+		log.Println("Failed to fetch categories:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to retrieve categories"})
+		return
+	}
+	defer categoryRows.Close()
+
+	for categoryRows.Next() {
+		var category string
+		if err := categoryRows.Scan(&category); err != nil {
+			log.Println("Failed to scan category:", err)
+			continue
+		}
+		post.Categories = append(post.Categories, category)
+	}
+
+	// Check for errors from categoryRows.Next()
+	if err = categoryRows.Err(); err != nil {
+		log.Println("Error iterating over category rows:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error processing categories"})
+		return
+	}
+
 	json.NewEncoder(w).Encode(post)
 }

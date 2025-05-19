@@ -1,44 +1,62 @@
-let emailNicknameStatus = false
-let loginPasswordStatus = false
+let emailNicknameStatus = false;
+let loginPasswordStatus = false;
+const loginBtn = document.getElementById('loginBtn');
+const emailNicknameInput = document.getElementById('emailNickname');
+const loginPswdInput = document.getElementById('loginPswd');
+const emailNicknameError = document.getElementById('emailNicknameError');
+const loginPasswordError = document.getElementById('loginPasswordError');
+const falseUserError = document.getElementById('falseUser');
+const falsePaswdError = document.getElementById('falsePaswd');
+const usernameDisplay = document.getElementById('usernameDisplay');
 
+
+// Checks the validation status of all login form fields
+// and enables/disables the login button accordingly
 function checkInfos() {
-    if (emailNicknameStatus && loginPasswordStatus) {
-        document.getElementById('loginBtn').disabled = false
-    } else {
-        document.getElementById('loginBtn').disabled = true
-    }
+    loginBtn.disabled = !(emailNicknameStatus && loginPasswordStatus);
 }
-document.getElementById('emailNickname').addEventListener('input', function () {
-    if (usernameRegex.test(document.getElementById('emailNickname').value) || emailRegex.test(document.getElementById('emailNickname').value)) {
-        emailNicknameStatus = true
-        document.getElementById('emailNicknameError').classList.add('hidden')
-    } else {
-        emailNicknameStatus = false
-        document.getElementById('emailNicknameError').classList.remove('hidden')
-        document.getElementById('emailNicknameError').style.color = 'red'
-    }
-    checkInfos()
-})
 
-document.getElementById('loginPswd').addEventListener("input", function () {
-    if (!passwordRegex.test(document.getElementById('loginPswd').value)) {
-        loginPasswordStatus = false
-        document.getElementById('loginPasswordError').classList.remove('hidden')
-        document.getElementById('loginPasswordError').style.color = 'red'
-    } else {
-        loginPasswordStatus = true
-        document.getElementById('loginPasswordError').classList.add('hidden')
-    }
-    checkInfos()
-})
+// Validates email/username input field
+function validateEmailNickname() {
+    const value = emailNicknameInput.value;
 
-document.getElementById('loginBtn').addEventListener('click', function (event) {
-    event.preventDefault()
+    if (usernameRegex.test(value) || emailRegex.test(value)) {
+        emailNicknameStatus = true;
+        emailNicknameError.classList.add('hidden');
+    } else {
+        emailNicknameStatus = false;
+        emailNicknameError.classList.remove('hidden');
+        emailNicknameError.style.color = 'red';
+    }
+
+    checkInfos();
+}
+
+
+// Validates password input field
+function validatePassword() {
+    const value = loginPswdInput.value;
+
+    if (passwordRegex.test(value)) {
+        loginPasswordStatus = true;
+        loginPasswordError.classList.add('hidden');
+    } else {
+        loginPasswordStatus = false;
+        loginPasswordError.classList.remove('hidden');
+        loginPasswordError.style.color = 'red';
+    }
+    checkInfos();
+}
+
+
+// Handles the login form submission
+function handleLogin(event) {
+    event.preventDefault();
 
     const loginUser = {
-        UsernameOrEmail: document.getElementById('emailNickname').value,
-        Password: document.getElementById('loginPswd').value
-    }
+        UsernameOrEmail: emailNicknameInput.value,
+        Password: loginPswdInput.value
+    };
 
     fetch('api/login', {
         method: 'POST',
@@ -46,20 +64,31 @@ document.getElementById('loginBtn').addEventListener('click', function (event) {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(loginUser)
-    }).then(async response => await response.json())
+    })
+        .then(response => response.json())
         .then(result => {
+            // Reset error messages
+            falseUserError.classList.add('hidden');
+            falsePaswdError.classList.add('hidden');
+
+            // Handle different response cases
             if (result.message === 'Username or Email not found !') {
-                document.getElementById('falseUser').classList.remove('hidden')
-                document.getElementById('falseUser').style.color = 'red'
+                falseUserError.classList.remove('hidden');
+                falseUserError.style.color = 'red';
             } else if (result.message === 'Password not correct!') {
-                document.getElementById('falsePaswd').classList.remove('hidden')
-                document.getElementById('falsePaswd').style.color = 'red'
+                falsePaswdError.classList.remove('hidden');
+                falsePaswdError.style.color = 'red';
             } else {
-                document.getElementById('usernameDisplay').textContent = result.username
-                showPage('home-page')
+                usernameDisplay.textContent = result.username;
+                showPage('home-page');
             }
         })
-        .catch((error) => {
-            console.error('error in the login :', error)
-        })
-});
+        .catch(error => {
+            console.error('Error in the login:', error);
+        });
+}
+
+// Add event listeners
+emailNicknameInput.addEventListener('input', validateEmailNickname);
+loginPswdInput.addEventListener('input', validatePassword);
+loginBtn.addEventListener('click', handleLogin);

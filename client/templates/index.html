@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Home</title>
+    <title>RTF</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
@@ -12,7 +12,7 @@
 
 <body>
     <nav id="navbar" style="display: none;">
-        <div class="logo" onclick="showPage('home-page')">RealTimeForum</div>
+        <div class="logo" onclick="showPage('home-page')">R    T    F</div>
         <div class="user-menu">
             <div id="logout">
                 <i class="fa-solid fa-right-to-bracket"></i>
@@ -83,10 +83,6 @@
         <section id="home-page" style="display:none;">
             <div class="home-content">
                 <div class="main-content">
-                    <h1 id="filter">Categories</h1>
-                    <div id="categoriesFilter" class="categories-filter">
-                        <!-- Category buttons will be inserted here dynamically -->
-                    </div>
                     <div id="postsContainer">
                         <!-- Posts will be inserted here -->
                     </div>
@@ -110,7 +106,7 @@
             <input type="text" id="custom" placeholder="Add a custom category">
             <button id="addCategory">Add Category</button>
             <select id="categories">
-
+                <option value="" id="order" selected disabled>Choose a category !</option>
             </select>
             <p id="categoryError" class="hidden">Can't add this category because it's already there</p>
             <textarea type="text" id="content" placeholder="content" required></textarea>

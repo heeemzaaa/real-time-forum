@@ -72,47 +72,30 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		BroadcastUserStatus()
 	}()
 
-	// Set up ping timing
-	lastPing := time.Now()
-	pingInterval := 30 * time.Second
-
-	// Listen for messages
+	// Set read deadline and handle messages
 	for {
-		// Check if it's time to send a ping
-		if time.Since(lastPing) >= pingInterval {
-			connection.WriteMu.Lock()
-			err := conn.WriteMessage(websocket.PingMessage, []byte{})
-			connection.WriteMu.Unlock()
-			if err != nil {
-				log.Println("Error sending ping:", err)
-				return // Exit the loop on ping error
-			}
-			lastPing = time.Now()
-		}
-
-		// Key fix: Handle read timeouts properly
-		// Set a longer read deadline
-		conn.SetReadDeadline(time.Now().Add(pingInterval + 10*time.Second))
+		// Set a read deadline to detect disconnections
+		// This is simpler than ping/pong and works well
+		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 
 		// Read the next message
 		var message g.ChatMessage
 
-		// CRITICAL FIX: Handle ReadJSON errors properly to avoid the panic
+		// Handle ReadJSON errors properly to detect disconnections
 		err := conn.ReadJSON(&message)
 		if err != nil {
-			// Don't try to continue reading after an error
+			// Connection closed or error - no need to continue
 			if websocket.IsUnexpectedCloseError(err,
 				websocket.CloseNormalClosure,
 				websocket.CloseGoingAway) {
-				log.Printf("WebSocket error: %v", err)
+				log.Printf("WebSocket error for user %s: %v", username, err)
 			} else {
-				// Normal closure or timeout
-				log.Printf("WebSocket closed: %v", err)
+				log.Printf("WebSocket closed for user %s: %v", username, err)
 			}
-			return // Exit the loop on any read error
+			return // Exit the loop and trigger the deferred cleanup
 		}
 
-		// Process the message normally...
+		// Process the message normally
 		message.SenderID = userID
 		message.SenderName = username
 		message.Timestamp = time.Now()
@@ -161,7 +144,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				senderConn.WriteMu.Unlock()
 				if err != nil {
 					log.Println("Error sending confirmation to sender:", err)
-					// Don't close the whole connection for a single send error
 				}
 			}
 		}
@@ -178,7 +160,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				receiverConn.WriteMu.Unlock()
 				if err != nil {
 					log.Println("Error sending message to receiver:", err)
-					// Don't close the whole connection for a single send error
 				}
 			}
 		}
@@ -201,6 +182,11 @@ func BroadcastUserStatus() {
 		}
 	}
 	g.ActiveConnectionsMutex.RUnlock()
+
+	// log.Printf("Broadcasting user status: %d users online", len(onlineUsers))
+	for _, username := range onlineUsers {
+		log.Printf("User online: %s", username)
+	}
 
 	update := OnlineStatusUpdate{
 		Type:   "status_update",
@@ -239,23 +225,34 @@ func DeleteConnection(userID string, conn *websocket.Conn) {
 	}
 
 	// Find and remove the specific connection
+	foundIndex := -1
 	for i, c := range connections {
 		if c.Conn == conn {
-			// Remove this connection from the slice
-			if i == len(connections)-1 {
-				connections = connections[:i]
-			} else {
-				connections = append(connections[:i], connections[i+1:]...)
-			}
+			foundIndex = i
 			break
 		}
+	}
+
+	// If found, remove it
+	if foundIndex >= 0 {
+		// Fix: Properly remove from slice without leaving nil elements
+		// Use the more explicit approach to avoid bugs
+		newConnections := make([]*g.Connection, 0, len(connections)-1)
+		for i, c := range connections {
+			if i != foundIndex {
+				newConnections = append(newConnections, c)
+			}
+		}
+		connections = newConnections
 	}
 
 	// Update the map with the modified slice or delete the entry if empty
 	if len(connections) == 0 {
 		delete(g.ActiveConnections, userID)
+		// log.Printf("User %s is now offline (no active connections)", userID)
 	} else {
 		g.ActiveConnections[userID] = connections
+		// log.Printf("User %s still has %d active connections", userID, len(connections))
 	}
 }
 
@@ -274,16 +271,16 @@ func HandleGetOnlineUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get all users from the database
+	// fetch all the users , excluding you , bach t afficher l online fihom
 	rows, err := g.DB.Query(`
-		SELECT id, username FROM users WHERE id != ? ORDER BY username
-	`, currentUserID)
+        SELECT id, username FROM users WHERE id != ? ORDER BY username
+    `, currentUserID)
 	if err != nil {
 		log.Println("Error getting users:", err)
 		http.Error(w, "Error getting users", http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
+	defer rows.Close() // Ensure rows are closed
 
 	type UserWithStatus struct {
 		ID          string    `json:"id"`
@@ -293,13 +290,15 @@ func HandleGetOnlineUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var users []UserWithStatus
+	var lastMsgStr string
 
 	for rows.Next() {
 		var user UserWithStatus
 		err := rows.Scan(&user.ID, &user.Username)
 		if err != nil {
 			log.Println("Error scanning user:", err)
-			continue
+			http.Error(w, "Error reading users", http.StatusInternalServerError)
+			return
 		}
 
 		// Check if user is online
@@ -308,18 +307,29 @@ func HandleGetOnlineUsers(w http.ResponseWriter, r *http.Request) {
 		user.IsOnline = exists && len(connections) > 0
 		g.ActiveConnectionsMutex.RUnlock()
 
-		// Get the timestamp of the last message between these users
+		// Get last message timestamp
 		err = g.DB.QueryRow(`
-			SELECT MAX(sent_at) FROM Messages m
-			JOIN Conversations c ON m.conversation_id = c.id
-			WHERE (c.user1_id = ? AND c.user2_id = ?) OR (c.user1_id = ? AND c.user2_id = ?)
-		`, currentUserID, user.ID, user.ID, currentUserID).Scan(&user.LastMessage)
-		if err != nil {
-			// If no messages, use zero time
+            SELECT MAX(sent_at) FROM Messages m
+            JOIN Conversations c ON m.conversation_id = c.id
+            WHERE (c.user1_id = ? AND c.user2_id = ?) OR (c.user1_id = ? AND c.user2_id = ?)
+        `, currentUserID, user.ID, user.ID, currentUserID).Scan(&lastMsgStr)
+		if err == nil && lastMsgStr != "" {
+			user.LastMessage, err = time.Parse("2006-01-02 15:04:05", lastMsgStr)
+			if err != nil {
+				log.Println("Failed to parse time:", err)
+				user.LastMessage = time.Time{}
+			}
+		} else {
 			user.LastMessage = time.Time{}
 		}
 
 		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println("Row iteration error:", err)
+		http.Error(w, "Error reading user list", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -359,7 +369,7 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if requestBody.Limit == 0 {
-		requestBody.Limit = 10 // Default limit
+		requestBody.Limit = 10
 	}
 
 	// Get conversation ID
@@ -369,9 +379,9 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 		WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
 	`, currentUserID, requestBody.UserID, requestBody.UserID, currentUserID).Scan(&conversationID)
 	if err != nil {
-		// No conversation yet
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]interface{}{})
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error fetching the conversation"})
 		return
 	}
 
@@ -389,7 +399,6 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error getting messages", http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
 
 	var messages []g.Message
 
@@ -398,12 +407,23 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 		err := rows.Scan(&message.ID, &message.SenderID, &message.Username, &message.Content, &message.Timestamp)
 		if err != nil {
 			log.Println("Error scanning message:", err)
-			continue
+			rows.Close() // close before return
+			http.Error(w, "Error reading messages", http.StatusInternalServerError)
+			return
 		}
 		messages = append(messages, message)
 	}
 
-	// Reverse the messages to get chronological order (oldest first)
+	if err := rows.Err(); err != nil {
+		log.Println("Row iteration error:", err)
+		rows.Close()
+		http.Error(w, "Error reading message list", http.StatusInternalServerError)
+		return
+	}
+
+	rows.Close() // Final close after success
+
+	// Reverse for chronological order
 	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
 		messages[i], messages[j] = messages[j], messages[i]
 	}

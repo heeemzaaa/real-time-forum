@@ -15,7 +15,7 @@ import (
 
 func init() {
 	var err error
-	g.DB, err = sql.Open("sqlite3", "./server/database/database.db")
+	g.DB, err = sql.Open("sqlite3", "file=../../server/database/database.db?_busy_timeout=2000&_journal_mode=WAL")
 	if err != nil {
 		log.Fatal(err)
 	}

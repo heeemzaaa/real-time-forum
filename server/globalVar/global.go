@@ -26,13 +26,11 @@ type User struct {
 type Post struct {
 	ID         string    `db:"id" json:"id"`
 	UserId     string    `db:"user_id" json:"user_id"`
-	Image      string    `db:"image_url" json:"image_url"`
-	Title      string    `db:"title" json:"Title"`
-	Content    string    `db:"content" json:"Content"`
-	Categories string    `db:"category" json:"Category"`
+	Title      string    `db:"title" json:"title"`
+	Content    string    `db:"content" json:"content"`
+	Categories []string   `db:"category" json:"categories"`
 	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 	UserName   string    `json:"user_name"`
-	NbrComment int       `json:"nbr_comment"`
 }
 
 type Comment struct {

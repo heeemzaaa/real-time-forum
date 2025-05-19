@@ -12,7 +12,7 @@ import (
 )
 
 func PostHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "OPTIONS" {
+	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -31,7 +31,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = AddCategory(w ,post.Categories)
+	err = AddCategory(w, post.Categories)
 	if err != nil {
 		log.Println("Failed to create session:", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -68,75 +68,79 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 func AddPost(post g.Post) error {
 	postId := uuid.New().String()
-
 	query := `INSERT INTO posts (id,user_id,title,content) VALUES (?,?,?,?)`
 	_, err := g.DB.Exec(query, postId, post.UserId, post.Title, post.Content)
 	if err != nil {
 		fmt.Println(18, err)
 		return fmt.Errorf("db error: %v", err)
 	}
-
-	query = `INSERT INTO CategoriesByPost (post_id,category_name) VALUES (?,?)`
-	_, err = g.DB.Exec(query, postId, post.Categories)
-	if err != nil {
-		fmt.Println(19, err)
-		return fmt.Errorf("db error: %v", err)
+	for _, category := range post.Categories {
+		query = `INSERT INTO CategoriesByPost (post_id,category_name) VALUES (?,?)`
+		_, err = g.DB.Exec(query, postId, category)
+		if err != nil {
+			fmt.Println(19, err)
+			return fmt.Errorf("db error: %v", err)
+		}
 	}
+
 	return nil
 }
 
-func AddCategory(w http.ResponseWriter, categories string) error {
+func AddCategory(w http.ResponseWriter, categories []string) error {
 	var exist int
-	err := g.DB.QueryRow("SELECT COUNT (*) FROM categories WHERE category_name = ?", categories).Scan(&exist)
-	if err != nil {
-		fmt.Println(20, err)
-		return fmt.Errorf("db error: %v", err)
-	}
-	if exist > 0 {
-		return nil
-	}
-	categoryId := uuid.New().String()
 
-	rows, err := g.DB.Query("SELECT category_name FROM categories")
-	if err != nil {
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to retrieve posts"})
-		w.WriteHeader(http.StatusInternalServerError)
-		return err
-	}
-
-	var ReserveCategories []string
-
-	for rows.Next() {
-		var category string
-		err = rows.Scan(&category)
+	for _, category := range categories {
+		err := g.DB.QueryRow("SELECT COUNT (*) FROM categories WHERE category_name = ?", category).Scan(&exist)
 		if err != nil {
-			rows.Close()
-			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to scan categories"})
+			fmt.Println(20, err)
+			return fmt.Errorf("db error: %v", err)
+		}
+		if exist > 0 {
+			return nil
+		}
+		categoryId := uuid.New().String()
+
+		rows, err := g.DB.Query("SELECT category_name FROM categories")
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to retrieve posts"})
 			w.WriteHeader(http.StatusInternalServerError)
 			return err
 		}
-		ReserveCategories = append(ReserveCategories, category)
-	}
 
-	rows.Close()
-	
-	add := true
-	for i := 0; i < len(ReserveCategories); i++ {
-		if ReserveCategories[i] == categories {
-			add = false
-			break
-		}
-	}
+		var ReserveCategories []string
 
-	if add {
-		query := `INSERT INTO categories (id,category_name) VALUES (?,?)`
-		_, err = g.DB.Exec(query, categoryId, categories)
-		if err != nil {
-			fmt.Println(21, err)
-			return fmt.Errorf("db error: %v", err)
+		for rows.Next() {
+			var category string
+			err = rows.Scan(&category)
+			if err != nil {
+				rows.Close()
+				json.NewEncoder(w).Encode(map[string]string{"message": "Failed to scan categories"})
+				w.WriteHeader(http.StatusInternalServerError)
+				return err
+			}
+			ReserveCategories = append(ReserveCategories, category)
 		}
-	} else {
-		log.Println("Category already exist !")
+
+		rows.Close()
+
+		add := true
+		for i := 0; i < len(ReserveCategories); i++ {
+			if ReserveCategories[i] == category {
+				add = false
+				break
+			}
+		}
+
+		if add {
+			query := `INSERT INTO categories (id,category_name) VALUES (?,?)`
+			_, err = g.DB.Exec(query, categoryId, category)
+			if err != nil {
+				fmt.Println(21, err)
+				return fmt.Errorf("db error: %v", err)
+			}
+		} else {
+			log.Println("Category already exist !")
+		}
 	}
 
 	return nil

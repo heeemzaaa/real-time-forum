@@ -1,27 +1,74 @@
-const pages = ['home-page', 'register-login-page', 'add-post-page', 'profile-page', 'single-post-page', 'chat-page']
+const pages = ['home-page', 'register-login-page', 'add-post-page', 'profile-page', 'single-post-page', 'chat-page'];
+const navbar = document.getElementById('navbar');
+const postsContainer = document.getElementById('postsContainer');
+const userMenu = document.querySelector('.user-menu');
+const toHomeButton = document.getElementById('to-home');
+const toPostButton = document.getElementById('to-post');
+const toMessagesButton = document.getElementById('to-messages');
+const iconesNav = document.getElementById('icones-nav');
+const selectCategories = document.getElementById('categories')
 
-pages.forEach(id => {
-  document.getElementById(id).style.display = 'none'
-})
-navbar.style.display = 'none'
+// Initialize page
+function initializePage() {
+  // Hide all pages initially
+  pages.forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  navbar.style.display = 'none';
 
+  // Add event listeners for navigation
+  toHomeButton.addEventListener('click', () => showPage('home-page'));
+  toPostButton.addEventListener('click', () => showPage('add-post-page'));
+  toMessagesButton.addEventListener('click', () => showPage('chat-page'));
+
+  // Close user menu when clicking outside
+  window.addEventListener('click', (e) => {
+    if (!userMenu.contains(e.target)) {
+      userMenu.classList.remove('active');
+    }
+  });
+}
+
+// Session check on page load
 window.addEventListener('DOMContentLoaded', () => {
+  initializePage();
+
   fetch('/api/check-session', {
     credentials: 'include',
   })
     .then(response => response.json())
     .then(result => {
       if (result.message === "ok") {
-        showPage('home-page')
+        showPage('home-page');
       } else {
-        showPage('register-login-page')
+        showPage('register-login-page');
       }
     }).catch(() => {
-      showPage('register-login-page')
-    })
-})
+      showPage('register-login-page');
+    });
+});
 
-function loadPosts(categoryFilter = null) {
+// Page navigation
+function showPage(pageId) {
+  // Show selected page, hide others
+  pages.forEach(id => {
+    document.getElementById(id).style.display = (id === pageId) ? 'block' : 'none';
+  });
+
+  navbar.style.display = (pageId === 'register-login-page') ? 'none' : 'flex';
+
+  iconesNav.style.display = (pageId === 'home-page' || pageId === 'single-post-page') ? 'flex' : 'none';
+
+  if (pageId === 'home-page') {
+    loadOnlineUsers();
+    loadPosts(); // Load all posts
+  } else if (pageId === 'add-post-page') {
+    loadCategories();
+  }
+}
+
+// Post loading functions
+function loadPosts() {
   // Create request options
   const options = {
     method: 'POST',
@@ -29,161 +76,95 @@ function loadPosts(categoryFilter = null) {
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ category: categoryFilter })
+    body: JSON.stringify()
   };
 
   // Always use the same endpoint without changing the URL
   fetch('/api/get-posts', options)
     .then(response => response.json())
     .then(posts => {
-      console.log(posts)
-      const postsContainer = document.getElementById('postsContainer')
-      postsContainer.innerHTML = ""
+      postsContainer.innerHTML = "";
 
       if (posts.length === 0) {
-        const noPosts = document.createElement('div')
-        noPosts.style.textAlign = 'center'
-        noPosts.style.padding = '30px'
-        noPosts.style.color = '#888'
-        noPosts.textContent = categoryFilter ?
-          `No posts found in the "${categoryFilter}" category.` :
-          'No posts found.'
-        postsContainer.appendChild(noPosts)
-        return
+        displayNoPosts();
+        return;
       }
 
-      posts.forEach(post => {
-        const postCard = document.createElement('div')
-        postCard.id = "postCard"
-        // Add click event to each post card
-        postCard.addEventListener('click', () => {
-          showSinglePost(post.id)
-        })
-        postCard.style.cursor = "pointer"
-
-        function createField(valueText) {
-          const field = document.createElement('div')
-          const value = document.createElement('span')
-          value.textContent = valueText
-          field.append(value)
-          return field
-        }
-
-        // Format date to be more readable
-        const createdDate = new Date(post.created_at);
-        const formattedDate = `${createdDate.toLocaleDateString()} ${createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-
-        const user = `By: ${post.user_name}`
-
-
-        postCard.append(
-          createField(post.Title),
-          createField(post.Category),
-          createField(post.Content),
-          createField(formattedDate),
-          createField(user)
-        )
-
-        postsContainer.append(postCard)
-      })
+      renderPosts(posts);
     }).catch(error => {
-      console.error("Failed to load posts", error)
-    })
+      console.error("Failed to load posts", error);
+    });
 }
 
-function toggleDropdown() {
-  document.querySelector('.user-menu').classList.toggle('active');
+function displayNoPosts() {
+  const noPosts = document.createElement('div');
+  noPosts.style.textAlign = 'center';
+  noPosts.style.padding = '30px';
+  noPosts.style.color = '#888';
+  noPosts.textContent = 'No posts found.';
+  postsContainer.appendChild(noPosts);
 }
 
-function showPage(pageId) {
-  pages.forEach(id => {
-    document.getElementById(id).style.display = (id === pageId) ? 'block' : 'none'
-  })
+function renderPosts(posts) {  
+  posts.forEach(post => {
+    console.log("this is the posts:",post);
+    
+    const postCard = document.createElement('div');
+    postCard.id = "postCard";
+    postCard.addEventListener('click', () => {
+      showSinglePost(post.id);
+    });
+    postCard.style.cursor = "pointer";
 
-  if (pageId === 'register-login-page') {
-    navbar.style.display = 'none';
-  } else {
-    navbar.style.display = 'flex';
-  }
+    let Categories = post.categories
+    // console.log(Categories);
+    
 
-  if (pageId === 'home-page' || pageId === 'single-post-page') {
-    document.getElementById('icones-nav').style.display = 'flex'
-  } else {
-    document.getElementById('icones-nav').style.display = 'none'
-  }
+    // Format date to be more readable
+    const createdDate = new Date(post.created_at);
+    const formattedDate = `${createdDate.toLocaleDateString()} ${createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const user = `By: ${post.user_name}`;
 
-  if (pageId === 'home-page') {
-    loadCategoryFilters() // Load category filters first
-    loadPosts() // Then load all posts
-  }
+    postCard.append(
+      createField(post.title),
+      createField(Categories),
+      createField(post.content),
+      createField(formattedDate),
+      createField(user)
+    );
 
-  if (pageId === 'add-post-page') {
-    loadCategories()
-  }
+    postsContainer.append(postCard);
+  });
 }
 
+function createField(valueText) {
+  const field = document.createElement('div');
+  const value = document.createElement('span');
+  value.textContent = valueText;
+  field.append(value);
+  return field;
+}
 
-window.addEventListener('click', function (e) {
-  const menu = document.querySelector('.user-menu')
-  if (!menu.contains(e.target)) {
-    menu.classList.remove('active')
-  }
-})
-
-function loadCategoryFilters() {
+// Category functions
+function loadCategories() {
   fetch('/api/get-categories', {
     credentials: 'include'
   })
     .then(response => response.json())
     .then(categories => {
-      const categoriesFilter = document.getElementById('categoriesFilter')
-      categoriesFilter.innerHTML = ""
-
-      // Add "All" button first
-      const allButton = document.createElement('button')
-      allButton.className = 'category-button active'
-      allButton.textContent = 'All'
-      allButton.addEventListener('click', () => {
-        setActiveCategory(allButton)
-        loadPosts()
-      })
-      categoriesFilter.appendChild(allButton)
-
-      // Add buttons for each category
+      console.log(categories)
       categories.forEach(category => {
-        const button = document.createElement('button')
-        button.className = 'category-button'
-        button.textContent = category.Category_name
-        button.addEventListener('click', () => {
-          setActiveCategory(button)
-          loadPosts(category.Category_name)
-        })
-        categoriesFilter.appendChild(button)
+        const option = document.createElement('option')
+        option.value = category.Category_name
+        option.textContent = category.Category_name
+        selectCategories.appendChild(option)
       })
-    })
-    .catch(error => {
-      console.error("Failed to load categories", error)
-    })
+    }).catch(error => {
+      console.error("Failed to load categories", error);
+    });
 }
 
-// Helper function to set active category button
-function setActiveCategory(activeButton) {
-  const buttons = document.querySelectorAll('.category-button')
-  buttons.forEach(button => {
-    button.classList.remove('active')
-  })
-  activeButton.classList.add('active')
+// User menu toggle
+function toggleDropdown() {
+  userMenu.classList.toggle('active');
 }
-
-
-document.getElementById('to-home').addEventListener('click', function () {
-  showPage('home-page')
-})
-
-document.getElementById('to-post').addEventListener('click', function () {
-  showPage('add-post-page')
-})
-
-document.getElementById('to-messages').addEventListener('click', function () {
-  showPage('chat-page')
-})
