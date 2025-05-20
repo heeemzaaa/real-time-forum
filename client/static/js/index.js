@@ -6,7 +6,7 @@ const toHomeButton = document.getElementById('to-home');
 const toPostButton = document.getElementById('to-post');
 const toMessagesButton = document.getElementById('to-messages');
 const iconesNav = document.getElementById('icones-nav');
-const selectCategories = document.getElementById('categories')
+const selectCategories = document.getElementById('categories');
 
 // Initialize page
 function initializePage() {
@@ -21,12 +21,6 @@ function initializePage() {
   toPostButton.addEventListener('click', () => showPage('add-post-page'));
   toMessagesButton.addEventListener('click', () => showPage('chat-page'));
 
-  // Close user menu when clicking outside
-  window.addEventListener('click', (e) => {
-    if (!userMenu.contains(e.target)) {
-      userMenu.classList.remove('active');
-    }
-  });
 }
 
 // Session check on page load
@@ -57,7 +51,7 @@ function showPage(pageId) {
 
   navbar.style.display = (pageId === 'register-login-page') ? 'none' : 'flex';
 
-  iconesNav.style.display = (pageId === 'home-page' || pageId === 'single-post-page') ? 'flex' : 'none';
+  iconesNav.style.display = (pageId === 'register-login-page') ? 'none' : 'flex';
 
   if (pageId === 'home-page') {
     loadOnlineUsers();
@@ -107,7 +101,7 @@ function displayNoPosts() {
 
 function renderPosts(posts) {  
   posts.forEach(post => {
-    console.log("this is the posts:",post);
+    // console.log("this is the posts:",post);
     
     const postCard = document.createElement('div');
     postCard.id = "postCard";
@@ -154,6 +148,7 @@ function loadCategories() {
     .then(categories => {
       console.log(categories)
       categories.forEach(category => {
+        categoriesSlice.push(category)
         const option = document.createElement('option')
         option.value = category.Category_name
         option.textContent = category.Category_name

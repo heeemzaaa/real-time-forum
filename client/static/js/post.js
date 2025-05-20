@@ -30,11 +30,14 @@ function validPost() {
 
 
 let categoriesSlice = [];
-for (let i = 0; i < options.length; i++) {
-    if (!options[i].disabled) {
-        categoriesSlice.push(options[i].value);
-    }
-}
+// for (let i = 0; i < options.length; i++) {
+//     if (!options[i].disabled) {
+//         categoriesSlice.push(options[i].value);
+//     }
+// }
+
+// console.log("options:" , options);
+
 
 title.addEventListener('input', function () {
     if (document.getElementById('title').value === '') {
@@ -48,24 +51,21 @@ title.addEventListener('input', function () {
 addCategory.addEventListener('click', function (event) {
     event.preventDefault()
     newCategory = custom.value
-    let add = true
+    
     for (let i = 0; i < categoriesSlice.length; i++) {
-        if (newCategory === categoriesSlice[i]) {
-            add = false
-            break
+        if (newCategory === categoriesSlice[i].Category_name) {
+            categoryError.classList.remove('hidden')
+            categoryError.style.color = 'red'
+            return
         }
     }
-    if (add) {
-        categoriesSlice.push(newCategory)
-        categoryError.classList.add('hidden')
-        let option = document.createElement('option')
-        option.value = newCategory
-        option.textContent = newCategory
-        selectCategories.appendChild(option)
-    } else {
-        categoryError.classList.remove('hidden')
-        categoryError.style.color = 'red'
-    }
+
+    categoriesSlice.push(newCategory)
+    categoryError.classList.add('hidden')
+    let option = document.createElement('option')
+    option.value = newCategory
+    option.textContent = newCategory
+    selectCategories.appendChild(option)
 })
 
 select.addEventListener('change', function (event) {
@@ -151,7 +151,7 @@ function showSinglePost(postId) {
 
             let Categories = post.categories
             console.log(Categories);
-            
+
 
 
             container.append(

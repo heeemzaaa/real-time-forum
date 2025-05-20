@@ -1,22 +1,18 @@
 /* Base & Layout */
-body,
-html {
+body {
     margin: 0;
     padding: 0;
-    min-width: 100%;
     min-height: 100vh;
-    display: flex;
-    justify-content: center;
+    min-width: 100%;
+    /* display: flex; */
+    display: block !important;
     align-items: center;
+    justify-items: center;
     scroll-padding-top: 120px;
     font-family: 'Jost', sans-serif;
     background: white;
     background-attachment: fixed;
     color: #095aa5;
-}
-
-body {
-    display: block !important;
 }
 
 /* Navbar Styling */
@@ -28,7 +24,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 30px;
+    padding: 0 10%;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     position: fixed;
     top: 0;
@@ -114,11 +110,11 @@ body {
 #home-page {
     justify-content: center;
     align-items: center;
-    padding-top: 120px;
+    /* padding-top: 10px; */
     padding-bottom: 30px;
     width: 100%;
     margin: 0 auto;
-    max-width: 100%;
+    /* max-width: 100%; */
     /* Increased from 800px */
 }
 
@@ -137,9 +133,7 @@ body {
     box-sizing: border-box;
     transition: transform 0.2s, box-shadow 0.2s;
     width: 100%;
-    /* Set width to 100% of parent */
-    max-width: none;
-    /* Remove max-width restriction */
+    word-break: break-all;
 }
 
 #postCard:hover {
@@ -184,11 +178,10 @@ body {
 
 /* Login and Signup Forms */
 .main {
-    margin-left: auto;
-    margin-right: auto;
     margin-top: 5vh;
     margin-bottom: 5vh;
-    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
     width: 500px;
     height: 700px;
     overflow: hidden;
@@ -206,6 +199,11 @@ body {
     height: 100%;
 }
 
+.signup label {
+    color: #095aa5;
+    transform: scale(.6);
+}
+
 label {
     color: #095aa5;
     font-size: 2.3em;
@@ -218,11 +216,11 @@ label {
 }
 
 input {
-    width: 70%;
+    width: 80%;
     height: 15px;
     background: #e0dede;
-    justify-content: center;
     display: flex;
+    justify-content: center;
     margin: 15px auto;
     padding: 12px;
     border: none;
@@ -300,38 +298,41 @@ button:hover {
     height: 650px;
     background: #095aa5;
     border-radius: 60% / 10%;
-    transform: translateY(-180px);
+    transform: translateY(-680px);
     transition: .8s ease-in-out;
 }
 
 .login label {
     color: white;
-    transform: scale(.8);
-}
-
-#chk:checked~.login {
-    transform: translateY(-680px);
-}
-
-#chk:checked~.login label {
     transform: scale(1);
 }
 
-#chk:checked~.signup label {
+#chk:checked~.login {
+    transform: translateY(-180px);
+}
+
+#chk:checked~.login label {
     transform: scale(.6);
 }
 
+#chk:checked~.signup label {
+    transform: scale(1);
+}
+
+
 /* Add Post Page */
-.post {
+#add-post-page {
+    margin-top: 5vh;
+    margin-bottom: 15vh;
     margin-left: auto;
     margin-right: auto;
-    margin-top: 15vh;
-    margin-bottom: 15vh;
-    width: 600px;
-    min-height: 800px;
+    padding: 0;
+    width: 40%;
+    min-height: 80%;
     overflow-y: auto;
     border-radius: 10px;
     box-shadow: 5px 20px 50px #000;
+    min-width: 280px;
 }
 
 /* Error messages */
@@ -545,7 +546,7 @@ h1 {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 50px;
+    font-size: 32px;
 }
 
 .categories-filter {
@@ -553,13 +554,12 @@ h1 {
     flex-wrap: nowrap;
     /* Prevent wrapping to new lines */
     gap: 10px;
-    margin-bottom: 30px;
-    margin-top: 10px;
+    margin: 20px;
     overflow-x: auto;
     /* Enable horizontal scrolling if needed */
     padding: 5px 0;
     /* Add some padding for better appearance */
-    justify-content: center;
+    /* justify-content: center; */
     /* Align items to the start of the container */
     -webkit-overflow-scrolling: touch;
     /* Smooth scrolling on iOS */
@@ -612,55 +612,62 @@ h1 {
 
 #icones-nav {
     display: flex;
-    margin-top: 150px;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 100px 100px 0;
     justify-content: center;
-    width: 50%;
     align-items: center;
     border: 2px solid #a5a5a5;
-    border-radius: 8px;
-    padding: 5px 5px;
+    border-radius: 12px;
+    padding: 10px 10px;
+    width: 70%;
 }
 
 i {
-    font-size: 30px;
-    margin: 20px 10px;
+    font-size: 26px;
+    margin: 16px 8px;
 }
 
 #span-icone {
-    font-size: 30px;
-    margin: 10px;
+    font-size: 26px;
+    margin: 8px;
+}
+
+@media (max-width: 1180px) {
+    #add-post-page {
+        width: 60%; 
+    }
+}
+@media (max-width: 750px) {
+   
+    
+
+    #span-icone {
+        display: none;
+    }
+    i {
+        margin: 16px 16px;
+    }
+    #icones-nav {
+        margin: 100px 20px 0;
+    }
 }
 
 #to-home,
 #to-post,
 #to-messages {
-    margin: 10px 40px;
+    margin: 0 10px;
     cursor: pointer;
     transition: 0.5s;
 }
 
-#to-home:hover {
-    background-color: white;
-    border-radius: 8px;
-    transform: scale(1.2);
-}
-
-#to-post:hover {
-    background-color: white;
-    border-radius: 8px;
-    transform: scale(1.2);
-}
-
-#to-messages:hover {
-    background-color: white;
+#to-home:hover,
+#to-post:hover,
+#to-messages:hover  {
+    background-color: transparent;
     border-radius: 8px;
     transform: scale(1.2);
 }
 
 #logout {
-    margin: 5px 40px;
     cursor: pointer;
     transition: 0.5s;
 }
@@ -677,9 +684,10 @@ i {
 /* Chat page styling */
 #chat-page {
     display: flex;
-    height: calc(100vh - 50px);
+    height:  calc(100vh - 50px);
     /* Slightly taller */
-    padding-top: 100px;
+    padding-top: 20px;
+    padding-bottom: 20px;
     /* Reduced from 120px */
     width: 90%;
     /* Increased from 100% */
@@ -699,7 +707,7 @@ i {
 
 /* Users list - left sidebar */
 #usersListContainer {
-    width: 300px;
+    width: 200px;
     background-color: #f8f9fa;
     border-right: 1px solid #dee2e6;
     overflow-y: auto;
@@ -747,17 +755,13 @@ i {
 
 .online-indicator {
     background-color: #28a745;
-    /* Bright green for online users */
 }
 
 .offline-indicator {
     background-color: #6c757d;
-    /* Gray for offline users */
 }
 
-/* Make online usernames bold for better visibility */
-.user-item.online .user-name,
-.home-user-item.online .user-name {
+.user-item.online .user-name {
     font-weight: bold;
 }
 
@@ -767,6 +771,7 @@ i {
 
 /* Chat area - right side */
 #chatContainer {
+    min-width: 180px;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -892,20 +897,21 @@ i {
 .home-content {
     display: flex;
     justify-content: space-between;
-    gap: 20px;
+    gap: 2rem;
 }
 
 .main-content {
     flex: 1;
+    min-width: 12rem;
 }
 
 /* Home page users sidebar */
 #homePageSidebar {
-    width: 250px;
+    width: 20%;
     background-color: #f8f9fa;
     border-left: 1px solid #dee2e6;
     padding: 15px;
-    margin-top: 20px;
+    margin-top: 3rem;
     border-radius: 8px;
     border: 2px solid #095aa5;
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"html"
 	"log"
 	"net/http"
 	"time"
@@ -76,13 +77,13 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	for {
 		// Set a read deadline to detect disconnections
 		// This is simpler than ping/pong and works well
-		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		conn.SetReadDeadline(time.Now().Add(180 * time.Second))
 
 		// Read the next message
 		var message g.ChatMessage
 
 		// Handle ReadJSON errors properly to detect disconnections
-		err := conn.ReadJSON(&message)
+		err = conn.ReadJSON(&message)
 		if err != nil {
 			// Connection closed or error - no need to continue
 			if websocket.IsUnexpectedCloseError(err,
@@ -121,7 +122,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 		}
-
+		message.Content = html.EscapeString(message.Content)
 		// Insert message
 		_, err = g.DB.Exec(`
             INSERT INTO Messages (id, conversation_id, sender_id, content) 
