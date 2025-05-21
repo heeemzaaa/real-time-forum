@@ -948,3 +948,18 @@ i {
 .home-user-item.online .user-name {
     font-weight: bold;
 }
+
+.toast {
+    position: fixed;
+    text-decoration: solid;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    background-color: white;
+    color: #095aa5;
+    border-radius: 5px;
+    padding: 10px 15px;
+    border: 2px solid white;
+    border-bottom: 5px solid #095aa5;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}

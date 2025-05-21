@@ -8,17 +8,20 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 )
-
+// this function handles all the logic of the login
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-
+	
+	w.Header().Set("Content-Type", "application/json")
+	
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	
 
 	type UserChecker struct {
 		UsernameOrEmail string `json:"UsernameOrEmail"`
@@ -29,23 +32,22 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&checker)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the parsing of the data!"})
+		log.Println("Error in database:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
 		return
 	}
 
 	exist := 0
 	err = g.DB.QueryRow("SELECT COUNT (*) FROM users WHERE username = ? OR email = ?", checker.UsernameOrEmail, checker.UsernameOrEmail).Scan(&exist)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
+		log.Println("Error in database:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Database error!"})
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
 		return
 	}
 
 	if exist == 0 {
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Username or Email not found !"})
 		return
@@ -53,15 +55,15 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	hashedPassword := ""
 	err = g.DB.QueryRow("SELECT password_hash FROM users WHERE username = ? OR email = ?", checker.UsernameOrEmail, checker.UsernameOrEmail).Scan(&hashedPassword)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
+		log.Println("Error in database:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Database error!"})
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(checker.Password))
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
+		log.Println("Error in the hashing:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Password not correct!"})
 		return
@@ -71,9 +73,9 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	id := ""
 	err = g.DB.QueryRow("SELECT username,id FROM users WHERE username = ? OR email = ?", checker.UsernameOrEmail, checker.UsernameOrEmail).Scan(&username,&id)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
+		log.Println("Error in database:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Database error!"})
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
 		return
 	}
 
@@ -81,7 +83,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Failed to create session:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to create session !"})
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
 	}
 
 	w.Header().Set("Content-Type", "application/json")

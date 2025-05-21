@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// this function creates a session
 func CreateSession(w http.ResponseWriter, userId string, username string) error {
 	var existingSessionID string
 	var expiration time.Time
@@ -57,7 +58,10 @@ func CreateSession(w http.ResponseWriter, userId string, username string) error 
 	return nil
 }
 
+// this function checks if the session is valid or not
 func CheckSession(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -69,9 +73,9 @@ func CheckSession(w http.ResponseWriter, r *http.Request) {
 	var username string
 	err = g.DB.QueryRow("SELECT username,expires_at FROM Session WHERE id = ?", cookie.Value).Scan(&username, &expiration)
 	if err != nil || time.Now().After(expiration) {
-		log.Println(err)
+		log.Println("Error:" , err)
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the database"})
+		json.NewEncoder(w).Encode(map[string]string{"message": "try to login again"})
 		return
 	}
 	w.WriteHeader(http.StatusOK)

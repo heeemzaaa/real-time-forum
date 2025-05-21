@@ -11,11 +11,14 @@ import (
 	"github.com/google/uuid"
 )
 
+// this function handles the logic of adding a post
 func PostHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -25,60 +28,62 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	var post g.Post
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
+		log.Println("Failed to read the json data:", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the parsing of the data!"})
 		return
 	}
 
-	err = AddCategory(w, post.Categories)
+	err = AddCategory(post.Categories)
 	if err != nil {
 		log.Println("Failed to create session:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to insert category !"})
+		return
 	}
 
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
+		log.Println("Failed to fetch the cookie:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to fetch the cookie !"})
+		return
 	}
 	sessionId := cookie.Value
 
 	userId := ""
 	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", sessionId).Scan(&userId)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
+		log.Println("Error in the database:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to fetch the user id !"})
 	}
 	post.UserId = userId
 	err = AddPost(post)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
+		log.Println("Error adding the post:" ,err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Error to add post !"})
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Post created !"})
 }
 
+// this function is responsible for adding a new post to the database
 func AddPost(post g.Post) error {
 	postId := uuid.New().String()
 	query := `INSERT INTO posts (id,user_id,title,content) VALUES (?,?,?,?)`
 	_, err := g.DB.Exec(query, postId, post.UserId, post.Title, post.Content)
 	if err != nil {
-		fmt.Println(18, err)
+		log.Println("Error in the database:",err)
 		return fmt.Errorf("db error: %v", err)
 	}
 	for _, category := range post.Categories {
 		query = `INSERT INTO CategoriesByPost (post_id,category_name) VALUES (?,?)`
 		_, err = g.DB.Exec(query, postId, category)
 		if err != nil {
-			fmt.Println(19, err)
+			fmt.Println("Error in the databse:", err)
 			return fmt.Errorf("db error: %v", err)
 		}
 	}
@@ -86,13 +91,14 @@ func AddPost(post g.Post) error {
 	return nil
 }
 
-func AddCategory(w http.ResponseWriter, categories []string) error {
+// this function 
+func AddCategory(categories []string) error {
 	var exist int
 
 	for _, category := range categories {
 		err := g.DB.QueryRow("SELECT COUNT (*) FROM categories WHERE category_name = ?", category).Scan(&exist)
 		if err != nil {
-			fmt.Println(20, err)
+			log.Println("Error in the database:" ,err)
 			return fmt.Errorf("db error: %v", err)
 		}
 		if exist > 0 {
@@ -102,9 +108,8 @@ func AddCategory(w http.ResponseWriter, categories []string) error {
 
 		rows, err := g.DB.Query("SELECT category_name FROM categories")
 		if err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to retrieve posts"})
-			w.WriteHeader(http.StatusInternalServerError)
-			return err
+			log.Println("Error in the database:" ,err)
+			return fmt.Errorf("db error: %v", err)
 		}
 
 		var ReserveCategories []string
@@ -114,8 +119,7 @@ func AddCategory(w http.ResponseWriter, categories []string) error {
 			err = rows.Scan(&category)
 			if err != nil {
 				rows.Close()
-				json.NewEncoder(w).Encode(map[string]string{"message": "Failed to scan categories"})
-				w.WriteHeader(http.StatusInternalServerError)
+				log.Println("Error in the database:" ,err)
 				return err
 			}
 			ReserveCategories = append(ReserveCategories, category)

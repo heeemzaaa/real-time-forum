@@ -8,7 +8,10 @@ import (
 	"time"
 )
 
+// this function handles all the logout logic, clears the session from the table...
 func HandleLogout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		log.Println("Failed to get cookie:", err)
