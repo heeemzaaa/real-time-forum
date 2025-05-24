@@ -10,17 +10,16 @@ import (
 )
 
 type User struct {
-	ID               string    `db:"id" json:"id"`
-	Username         string    `db:"username" json:"Username"`
-	Email            string    `db:"email" json:"Email"`
-	Age              int       `db:"age" json:"Age"`
-	Gender           string    `db:"gender" json:"Gender"`
-	FirstName        string    `db:"firstName" json:"FirstName"`
-	LastName         string    `db:"lastName" json:"LastName"`
-	PasswordHash     string    `db:"password_hash" json:"PasswordHash"`
-	CreatedAt        time.Time `db:"created_at" json:"created_at"`
-	UserPostCount    int       `db:"user_post_count" json:"user_post_count"`
-	UserCommentCount int       `db:"user_comment_count" json:"user_comment_count"`
+	ID           string    `db:"id" json:"id"`
+	Username     string    `db:"username" json:"Username"`
+	Email        string    `db:"email" json:"Email"`
+	Age          int       `db:"age" json:"Age"`
+	Gender       string    `db:"gender" json:"Gender"`
+	FirstName    string    `db:"firstName" json:"FirstName"`
+	LastName     string    `db:"lastName" json:"LastName"`
+	PasswordHash string    `db:"password_hash" json:"PasswordHash"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	// Online       bool      `json:"online"`
 }
 
 type Post struct {
@@ -28,7 +27,7 @@ type Post struct {
 	UserId     string    `db:"user_id" json:"user_id"`
 	Title      string    `db:"title" json:"title"`
 	Content    string    `db:"content" json:"content"`
-	Categories []string   `db:"category" json:"categories"`
+	Categories []string  `db:"category" json:"categories"`
 	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 	UserName   string    `json:"user_name"`
 }
@@ -76,13 +75,13 @@ type Message struct {
 }
 
 var (
-	Tpl               *template.Template
-	DB                *sql.DB
-	Users             []User
-	Posts             []Post
-	SliceOfCategories []Categories
-	Comments          []Comment
-	ReserveCategories []string
-	ActiveConnections = make(map[string][]*Connection)
+	Tpl                    *template.Template
+	DB                     *sql.DB
+	Users                  []User
+	Posts                  []Post
+	SliceOfCategories      []Categories
+	Comments               []Comment
+	ReserveCategories      []string
+	ActiveConnections      = make(map[string][]*Connection)
 	ActiveConnectionsMutex sync.RWMutex
 )

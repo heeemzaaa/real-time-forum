@@ -13,13 +13,13 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all connections (you might want to restrict this in production)
-	},
-}
+	// var upgrader = websocket.Upgrader{
+	// 	ReadBufferSize:  1024,
+	// 	WriteBufferSize: 1024,
+	// 	CheckOrigin: func(r *http.Request) bool {
+	// 		return true // Allow all connections (you might want to restrict this in production)
+	// 	},
+	// }
 
 // HandleWebSocket handles WebSocket connections
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -168,7 +168,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 // BroadcastUserStatus sends the current online users list to all connected clients
-func BroadcastUserStatus() {
+func BroadcastUserStatu() {
 	type OnlineStatusUpdate struct {
 		Type   string            `json:"type"`
 		Online map[string]string `json:"online"` // Map of userID -> username
@@ -216,7 +216,7 @@ func BroadcastUserStatus() {
 }
 
 // DeleteConnection removes a specific connection from the active connections map
-func DeleteConnection(userID string, conn *websocket.Conn) {
+func DeleteConnectionn(userID string, conn *websocket.Conn) {
 	g.ActiveConnectionsMutex.Lock()
 	defer g.ActiveConnectionsMutex.Unlock()
 
@@ -332,7 +332,7 @@ func HandleGetOnlineUsers(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error reading user list", http.StatusInternalServerError)
 		return
 	}
-
+	
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }
