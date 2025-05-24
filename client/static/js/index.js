@@ -54,7 +54,8 @@ function showPage(pageId) {
   iconesNav.style.display = (pageId === 'register-login-page') ? 'none' : 'flex';
 
   if (pageId === 'home-page') {
-    loadOnlineUsers();
+    // loadOnlineUsers();
+    connectWebSocket()
     loadPosts(); // Load all posts
   } else if (pageId === 'add-post-page') {
     loadCategories();

@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	g "real-time-forum/server/globalVar"
 
@@ -65,31 +67,21 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		g.ActiveConnections[userID] = []*g.Connection{connection}
 	}
 	g.ActiveConnectionsMutex.Unlock()
-
 	GetOnlineUsers(userID)
+	BroadcastUserStatus()
+
+	defer func() {
+		log.Printf("Cleaning up connection for user %s", userName)
+		conn.Close()
+		DeleteConnection(userID, conn)
+		GetOnlineUsers(userID)
+		BroadcastUserStatus()
+	}()
+	
+	time.Sleep(10 * time.Second)
 }
 
 func GetOnlineUsers(userID string) {
-	var users []g.User
-	rows, err := g.DB.Query("SELECT id,username FROM users WHERE id != ?", userID)
-	if err != nil {
-		log.Println("Error selecting all users:", err)
-		return
-	}
-
-	for rows.Next() {
-		var user g.User
-		err = rows.Scan(&user.ID, &user.Username)
-		if err != nil {
-			log.Println("Error scaning the username:", err)
-			rows.Close()
-			return
-		}
-		users = append(users, user)
-	}
-
-	rows.Close()
-
 	g.ActiveConnectionsMutex.Lock()
 	for userID, connections := range g.ActiveConnections {
 		if len(connections) > 0 {
@@ -128,8 +120,40 @@ func BroadcastUserStatus() {
 		}
 	}
 	g.ActiveConnectionsMutex.Unlock()
+	fmt.Println(OnlineUsers)
 }
 
 func DeleteConnection(userID string, conn *websocket.Conn) {
-	
+	g.ActiveConnectionsMutex.Lock()
+	defer g.ActiveConnectionsMutex.Unlock()
+
+	connections, exist := g.ActiveConnections[userID]
+	if !exist {
+		return
+	}
+
+	index := -1
+	for i, c := range connections {
+		if c.Conn == conn {
+			index = i
+			break
+		}
+	}
+
+	if index >= 0 {
+		newConnections := make([]*g.Connection, 0, len(connections)-1)
+		for i, c := range connections {
+			if i != index {
+				newConnections = append(newConnections, c)
+			}
+		}
+		connections = newConnections
+	}
+
+	if len(connections) == 0 {
+		delete(g.ActiveConnections, userID)
+		delete(OnlineUsers, userID)
+	} else {
+		g.ActiveConnections[userID] = connections
+	}
 }
