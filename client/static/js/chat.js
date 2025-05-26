@@ -1,9 +1,11 @@
-// let socket = null;
+let onlineUsers = {}
+let allUsers = {}
+const userList = document.getElementById('homePageUsersList')
+let you = usernameDisplay.textContent
 // let currentChatUserId = null;
 // let messagesLoaded = 0;
 // let isLoadingMoreMessages = false;
 // let hasMoreMessages = true;
-// let onlineUsers = {}; // Stores online user IDs
 // let reconnectAttempts = 0;
 // let isConnecting = false; // Flag to prevent multiple connection attempts
 // let maxReconnectAttempts = 5; // Maximum number of reconnection attempts
@@ -14,9 +16,57 @@ function connectWebSocket() {
     const socket = new WebSocket("ws://localhost:8080/api/ws")
 
     socket.onmessage = (event) => {
-        console.log(event.data)
+        try {
+            let data = JSON.parse(event.data)
+            onlineUsers = data.online
+            loadUsers(allUsers, onlineUsers)
+
+        } catch (e) {
+            console.error(e)
+        }
+
     }
 }
+
+function loadUsers(users) {
+    userList.innerHTML = ''
+    for (let userID in users) {
+        if (you != users[userID]) {
+            console.log(you)
+            let userStatus = document.createElement('div')
+            userStatus.classList.add('user-item');
+            userStatus.setAttribute('data-user-id', userID);
+            userStatus.classList.add('offline');
+            userStatus.innerHTML = `
+                <div class="user-status ${'offline-indicator'}"></div>
+                <div class="user-name">${users[userID]}</div>
+                `
+            if (users[userID] === onlineUsers[userID]) {
+                userStatus.classList.add('online');
+                userStatus.innerHTML = `
+                <div class="user-status ${'online-indicator'}"></div>
+                <div class="user-name">${users[userID]}</div>
+                `
+            }
+            userList.appendChild(userStatus)
+        }
+    }
+}
+
+
+
+// this function close the websocket if the client logs out
+// function closeConnection() {
+//     if (socket.readyState === WebSocket.OPEN) {
+//         socket.close(1000, "User logged out");
+//     }
+// }
+
+// // check if the client clicked the logout button
+// document.getElementById('logout').addEventListener('click', () => {
+//     closeConnection()
+// })
+
 // Connect to the WebSocket server
 // function connectWebSocket() {
 //     // Clear any existing reconnect timer
@@ -159,17 +209,6 @@ function connectWebSocket() {
 
 
 
-// // this function close the websocket if the client logs out
-// function closeConnection() {
-//     if (socket.readyState === WebSocket.OPEN) {
-//         socket.close(1000, "User logged out");
-//     }
-// }
-
-// // check if the client clicked the logout button
-// document.getElementById('logout').addEventListener('click', () => {
-//     closeConnection()
-// })
 
 // // Check if the user's session is still valid
 // function checkSession(callback) {

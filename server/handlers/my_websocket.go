@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -17,7 +16,10 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-var OnlineUsers = make(map[string]string)
+var (
+	OnlineUsers = make(map[string]string)
+	AllUsers    = make(map[string]string)
+)
 
 func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -77,11 +79,21 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		GetOnlineUsers(userID)
 		BroadcastUserStatus()
 	}()
-	
-	time.Sleep(10 * time.Second)
+
+	time.Sleep(180 * time.Second)
 }
 
 func GetOnlineUsers(userID string) {
+	rows, err := g.DB.Query("SELECT id,username FROM users")
+	if err != nil {
+		log.Println("Error selecting the users", err)
+		return
+	}
+	var users []g.User
+	for rows.next() {
+
+		var user g.User
+	}
 	g.ActiveConnectionsMutex.Lock()
 	for userID, connections := range g.ActiveConnections {
 		if len(connections) > 0 {
@@ -89,17 +101,23 @@ func GetOnlineUsers(userID string) {
 		}
 	}
 	g.ActiveConnectionsMutex.Unlock()
+
+	for _, u := range users {
+		AllUsers[u.ID] = u.Username
+	}
 }
 
 func BroadcastUserStatus() {
 	type OnlineStatus struct {
-		Type   string            `json:"type"`
-		Online map[string]string `json:"online"`
+		Type     string            `json:"type"`
+		AllUsers map[string]string `json:"allUsers"`
+		Online   map[string]string `json:"online"`
 	}
 
 	update := OnlineStatus{
-		Type:   "new_connection",
-		Online: OnlineUsers,
+		Type:     "new_connection",
+		AllUsers: AllUsers,
+		Online:   OnlineUsers,
 	}
 
 	status, err := json.Marshal(update)
@@ -120,7 +138,8 @@ func BroadcastUserStatus() {
 		}
 	}
 	g.ActiveConnectionsMutex.Unlock()
-	fmt.Println(OnlineUsers)
+	// fmt.Println("OnlineUsers" , OnlineUsers)
+	// fmt.Println("OfflineUsers" , OfflineUsers)
 }
 
 func DeleteConnection(userID string, conn *websocket.Conn) {

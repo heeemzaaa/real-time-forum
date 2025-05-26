@@ -19,7 +19,6 @@ type User struct {
 	LastName     string    `db:"lastName" json:"LastName"`
 	PasswordHash string    `db:"password_hash" json:"PasswordHash"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
-	// Online       bool      `json:"online"`
 }
 
 type Post struct {
@@ -55,7 +54,7 @@ type Connection struct {
 	Conn     *websocket.Conn
 	UserID   string
 	Username string
-	WriteMu  sync.Mutex // Add a mutex for each connection to protect writes
+	WriteMu  sync.Mutex
 }
 
 type ChatMessage struct {

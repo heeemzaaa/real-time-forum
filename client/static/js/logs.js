@@ -119,7 +119,7 @@ signup.button.addEventListener('click', (event) => {
         } else if (data.message == 'Please fill in all required fields') {
             Toast('Please fill in all required fields')
         } else if (data.message == 'User created') {
-            usernameDisplay.textContent = user.Username + " " + "▼"; //
+            usernameDisplay.textContent = user.Username; 
             Toast('Welcome to our forum ✅')
             showPage('home-page');
         } else {
@@ -158,7 +158,7 @@ login.button.addEventListener('click', (event) => {
         } else if (data.message === "Error in the server, please try again !") {
             Toast("Error in the server, please try again later 😊")
         } else {
-            usernameDisplay.textContent = data.username
+            usernameDisplay.textContent = data.username; 
             showPage('home-page')
             Toast('Welcome back ✅')
         }
