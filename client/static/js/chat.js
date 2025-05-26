@@ -19,6 +19,7 @@ function connectWebSocket() {
         try {
             let data = JSON.parse(event.data)
             onlineUsers = data.online
+            allUsers = data.allUsers
             loadUsers(allUsers, onlineUsers)
 
         } catch (e) {
@@ -28,28 +29,25 @@ function connectWebSocket() {
     }
 }
 
-function loadUsers(users) {
+function loadUsers(users, onlineUsers) {
     userList.innerHTML = ''
     for (let userID in users) {
-        if (you != users[userID]) {
-            console.log(you)
-            let userStatus = document.createElement('div')
-            userStatus.classList.add('user-item');
-            userStatus.setAttribute('data-user-id', userID);
-            userStatus.classList.add('offline');
-            userStatus.innerHTML = `
+        let userStatus = document.createElement('div')
+        userStatus.classList.add('user-item');
+        userStatus.setAttribute('data-user-id', userID);
+        userStatus.classList.add('offline');
+        userStatus.innerHTML = `
                 <div class="user-status ${'offline-indicator'}"></div>
                 <div class="user-name">${users[userID]}</div>
                 `
-            if (users[userID] === onlineUsers[userID]) {
-                userStatus.classList.add('online');
-                userStatus.innerHTML = `
+        if (users[userID] === onlineUsers[userID]) {
+            userStatus.classList.add('online');
+            userStatus.innerHTML = `
                 <div class="user-status ${'online-indicator'}"></div>
                 <div class="user-name">${users[userID]}</div>
                 `
-            }
-            userList.appendChild(userStatus)
         }
+        userList.appendChild(userStatus)
     }
 }
 

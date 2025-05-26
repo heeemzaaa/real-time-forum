@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -90,9 +91,17 @@ func GetOnlineUsers(userID string) {
 		return
 	}
 	var users []g.User
-	for rows.next() {
-
+	for rows.Next() {
 		var user g.User
+		err = rows.Scan(&user.ID, &user.Username)
+		if err != nil {
+			log.Println("Error scanning the users:", err)
+			return
+		}
+		if userID != user.ID {
+			users = append(users, user)
+			fmt.Println(user)
+		}
 	}
 	g.ActiveConnectionsMutex.Lock()
 	for userID, connections := range g.ActiveConnections {
@@ -138,8 +147,6 @@ func BroadcastUserStatus() {
 		}
 	}
 	g.ActiveConnectionsMutex.Unlock()
-	// fmt.Println("OnlineUsers" , OnlineUsers)
-	// fmt.Println("OfflineUsers" , OfflineUsers)
 }
 
 func DeleteConnection(userID string, conn *websocket.Conn) {
