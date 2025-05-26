@@ -1,7 +1,6 @@
 let onlineUsers = {}
 let allUsers = {}
-const userList = document.getElementById('homePageUsersList')
-let you = usernameDisplay.textContent
+// const userList = document.getElementById('homePageUsersList')
 // let currentChatUserId = null;
 // let messagesLoaded = 0;
 // let isLoadingMoreMessages = false;
@@ -18,38 +17,248 @@ function connectWebSocket() {
     socket.onmessage = (event) => {
         try {
             let data = JSON.parse(event.data)
-            onlineUsers = data.online
-            allUsers = data.allUsers
-            loadUsers(allUsers, onlineUsers)
-
+            loadOnlineUsers()
         } catch (e) {
             console.error(e)
         }
+    }
 
+    socket.onclose = (event) => {
+        console.log('WebSocket connection closed:', event)
+    }
+
+    socket.onerror = (error) => {
+        console.error('WebSocket error:', error)
     }
 }
 
-function loadUsers(users, onlineUsers) {
-    userList.innerHTML = ''
-    for (let userID in users) {
-        let userStatus = document.createElement('div')
-        userStatus.classList.add('user-item');
-        userStatus.setAttribute('data-user-id', userID);
-        userStatus.classList.add('offline');
-        userStatus.innerHTML = `
-                <div class="user-status ${'offline-indicator'}"></div>
-                <div class="user-name">${users[userID]}</div>
-                `
-        if (users[userID] === onlineUsers[userID]) {
-            userStatus.classList.add('online');
-            userStatus.innerHTML = `
-                <div class="user-status ${'online-indicator'}"></div>
-                <div class="user-name">${users[userID]}</div>
-                `
+// Update the UI to reflect online status
+function updateOnlineStatus() {
+    const userItems = document.querySelectorAll('.user-item');
+    userItems.forEach(item => {
+        const userId = item.getAttribute('data-user-id');
+        if (userId in onlineUsers) {
+            item.classList.add('online');
+            const statusIndicator = item.querySelector('.user-status');
+            if (statusIndicator) {
+                statusIndicator.classList.remove('offline-indicator');
+                statusIndicator.classList.add('online-indicator');
+            }
+        } else {
+            item.classList.remove('online');
+            const statusIndicator = item.querySelector('.user-status');
+            if (statusIndicator) {
+                statusIndicator.classList.remove('online-indicator');
+                statusIndicator.classList.add('offline-indicator');
+            }
         }
-        userList.appendChild(userStatus)
+    });
+}
+
+// Load online users
+function loadOnlineUsers() {
+    fetch('/api/get-online-users', {
+        credentials: 'include'
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(users => {
+            // Sort users by most recent message first, then by username
+            users.sort((a, b) => {
+                const timeA = new Date(a.last_message || 0).getTime();
+                const timeB = new Date(b.last_message || 0).getTime();
+                if (timeA === 0 && timeB === 0) {
+                    // Both have no messages, sort alphabetically
+                    return a.username.localeCompare(b.username);
+                } else if (timeA === 0) {
+                    // A has no messages, B has, so B comes first
+                    return 1;
+                } else if (timeB === 0) {
+                    // B has no messages, A has, so A comes first
+                    return -1;
+                } else {
+                    // Both have messages, sort by most recent
+                    return timeB - timeA;
+                }
+            });
+
+            // Update our local online status cache
+            const newOnlineUsers = {};
+            users.forEach(user => {
+                if (user.is_online) {
+                    newOnlineUsers[user.id] = user.username;
+                }
+            });
+            onlineUsers = newOnlineUsers;
+
+            // Update the user lists
+            const usersList = document.getElementById('usersList');
+            if (usersList) {
+                usersList.innerHTML = '';
+
+                users.forEach(user => {
+                    const userItem = document.createElement('div');
+                    userItem.classList.add('user-item');
+                    userItem.setAttribute('data-user-id', user.id);
+
+                    if (user.is_online) {
+                        userItem.classList.add('online');
+                    }
+
+                    // Add an indicator for the active chat
+                    // if (user.id === currentChatUserId) {
+                    //     userItem.classList.add('active');
+                    // }
+
+                    userItem.innerHTML = `
+                    <div class="user-status ${user.is_online ? 'online-indicator' : 'offline-indicator'}"></div>
+                    <div class="user-name">${user.username}</div>
+                    `;
+
+                    // userItem.addEventListener('click', () => {
+                    //     // Clear any active chat indicators
+                    //     document.querySelectorAll('.user-item.active').forEach(el => {
+                    //         el.classList.remove('active');
+                    //     });
+
+                    //     // Mark this chat as active
+                    //     // userItem.classList.add('active');
+
+                    //     // openChatWithUser(user.id, user.username);
+                    // });
+                    usersList.appendChild(userItem);
+                });
+            }
+
+            updateHomePageUsersList(users);
+        })
+        .catch(error => {
+            console.error('Failed to load online users:', error);
+        });
+}
+
+// Update the users list on the home page
+function updateHomePageUsersList(users) {
+    const homePageUsersList = document.getElementById('homePageUsersList');
+    if (!homePageUsersList) return;
+
+    homePageUsersList.innerHTML = '';
+
+    const onlineUsers = users.filter(user => user.is_online);
+    const offlineUsers = users.filter(user => !user.is_online);
+
+    if (onlineUsers.length > 0) {
+        const onlineSection = document.createElement('div');
+        onlineSection.className = 'users-section';
+        onlineSection.innerHTML = '<h3>Online Users</h3>';
+        homePageUsersList.appendChild(onlineSection);
+
+        onlineUsers.forEach(user => createUserItem(user, true, homePageUsersList));
+    }
+
+    if (offlineUsers.length > 0) {
+        const offlineSection = document.createElement('div');
+        offlineSection.className = 'users-section';
+        offlineSection.innerHTML = '<h3>Offline Users</h3>';
+        homePageUsersList.appendChild(offlineSection);
+
+        offlineUsers.forEach(user => createUserItem(user, false, homePageUsersList));
     }
 }
+
+function createUserItem(user, isOnline, container) {
+    const userItem = document.createElement('div');
+    userItem.className = `home-user-item ${isOnline ? 'online' : ''}`;
+    userItem.setAttribute('data-user-id', user.id);
+
+    userItem.innerHTML = `
+        <div class="user-status ${isOnline ? 'online-indicator' : 'offline-indicator'}"></div>
+        <div class="user-name">${user.username}</div>
+    `;
+
+    // Add click event to open chat with this user
+    userItem.addEventListener('click', () => {
+        showPage('chat-page');
+        setTimeout(() => {
+            openChatWithUser(user.id, user.username);
+        }, 100);
+    });
+
+    container.appendChild(userItem);
+}
+
+// Open chat with a specific user
+function openChatWithUser(userId, username) {
+    currentChatUserId = userId;
+    messagesLoaded = 0;
+    hasMoreMessages = true;
+
+    const chatHeader = document.getElementById('chatHeader');
+    if (chatHeader) {
+        chatHeader.textContent = username;
+    }
+
+    const messagesList = document.getElementById('messagesList');
+    if (messagesList) {
+        messagesList.innerHTML = '';
+    }
+
+    // loadMessages(0, 10);
+
+    // Show the chat area
+    const emptyChat = document.getElementById('emptyChat');
+    const chatArea = document.getElementById('chatArea');
+
+    if (emptyChat && chatArea) {
+        emptyChat.style.display = 'none';
+        chatArea.style.display = 'flex';
+    }
+
+    // Focus on message input
+    // setTimeout(() => {
+    //     const messageInput = document.getElementById('messageInput');
+    //     if (messageInput) {
+    //         messageInput.focus();
+    //     }
+    // }, 300);
+}
+
+
+// function loadUsers(users, onlineUsers) {
+//     userList.innerHTML = ''
+    
+//     console.log(you);
+//     for (let userID in users) {
+        
+//         if (userID === you) {
+//             continue;
+//         }
+
+//         let userStatus = document.createElement('div')
+//         userStatus.classList.add('user-item');
+//         userStatus.setAttribute('data-user-id', userID);
+        
+//         if (onlineUsers[userID] === true) {
+//             userStatus.classList.add('online');
+//             userStatus.innerHTML = `
+//                 <div class="user-status online-indicator"></div>
+//                 <div class="user-name">${users[userID]}</div>
+//             `
+//         } else {
+//             userStatus.classList.add('offline');
+//             userStatus.innerHTML = `
+//                 <div class="user-status offline-indicator"></div>
+//                 <div class="user-name">${users[userID]}</div>
+//             `
+//         }
+        
+//         userList.appendChild(userStatus)
+//     }
+// }
 
 
 
@@ -259,28 +468,7 @@ function loadUsers(users, onlineUsers) {
 //     }, delay);
 // }
 
-// // Update the UI to reflect online status
-// function updateOnlineStatus() {
-//     // Update user items in the sidebar
-//     const userItems = document.querySelectorAll('.user-item');
-//     userItems.forEach(item => {
-//         const userId = item.getAttribute('data-user-id');
-//         if (userId in onlineUsers) {
-//             item.classList.add('online');
-//             const statusIndicator = item.querySelector('.user-status');
-//             if (statusIndicator) {
-//                 statusIndicator.classList.remove('offline-indicator');
-//                 statusIndicator.classList.add('online-indicator');
-//             }
-//         } else {
-//             item.classList.remove('online');
-//             const statusIndicator = item.querySelector('.user-status');
-//             if (statusIndicator) {
-//                 statusIndicator.classList.remove('online-indicator');
-//                 statusIndicator.classList.add('offline-indicator');
-//             }
-//         }
-//     });
+
 
 //     // Update the home page user list
 //     const homeUserItems = document.querySelectorAll('.home-user-item');
@@ -304,131 +492,8 @@ function loadUsers(users, onlineUsers) {
 //     });
 // }
 
-// // Load online users
-// function loadOnlineUsers() {
-//     fetch('/api/get-online-users', {
-//         credentials: 'include'
-//     })
-//         .then(response => {
-//             if (!response.ok) {
-//                 throw new Error(`HTTP error ${response.status}`);
-//             }
-//             return response.json();
-//         })
-//         .then(users => {
-//             // Sort users by most recent message first, then by username
-//             users.sort((a, b) => {
-//                 const timeA = new Date(a.last_message || 0).getTime();
-//                 const timeB = new Date(b.last_message || 0).getTime();
-//                 if (timeA === 0 && timeB === 0) {
-//                     // Both have no messages, sort alphabetically
-//                     return a.username.localeCompare(b.username);
-//                 } else if (timeA === 0) {
-//                     // A has no messages, B has, so B comes first
-//                     return 1;
-//                 } else if (timeB === 0) {
-//                     // B has no messages, A has, so A comes first
-//                     return -1;
-//                 } else {
-//                     // Both have messages, sort by most recent
-//                     return timeB - timeA;
-//                 }
-//             });
 
-//             // Update our local online status cache
-//             const newOnlineUsers = {};
-//             users.forEach(user => {
-//                 if (user.is_online) {
-//                     newOnlineUsers[user.id] = user.username;
-//                 }
-//             });
-//             onlineUsers = newOnlineUsers;
 
-//             // Update the user lists
-//             const usersList = document.getElementById('usersList');
-//             if (usersList) {
-//                 usersList.innerHTML = '';
-
-//                 users.forEach(user => {
-//                     const userItem = document.createElement('div');
-//                     userItem.classList.add('user-item');
-//                     userItem.setAttribute('data-user-id', user.id);
-
-//                     if (user.is_online) {
-//                         userItem.classList.add('online');
-//                     }
-
-//                     // Add an indicator for the active chat
-//                     if (user.id === currentChatUserId) {
-//                         userItem.classList.add('active');
-//                     }
-
-//                     userItem.innerHTML = `
-//                     <div class="user-status ${user.is_online ? 'online-indicator' : 'offline-indicator'}"></div>
-//                     <div class="user-name">${user.username}</div>
-//                     `;
-
-//                     userItem.addEventListener('click', () => {
-//                         // Clear any active chat indicators
-//                         document.querySelectorAll('.user-item.active').forEach(el => {
-//                             el.classList.remove('active');
-//                         });
-
-//                         // Mark this chat as active
-//                         userItem.classList.add('active');
-
-//                         // Open chat with this user
-//                         openChatWithUser(user.id, user.username);
-//                     });
-//                     usersList.appendChild(userItem);
-//                 });
-//             }
-
-//             // Update the homepage users list as well
-//             updateHomePageUsersList(users);
-//         })
-//         .catch(error => {
-//             console.error('Failed to load online users:', error);
-//         });
-// }
-
-// // Update the users list on the home page
-// function updateHomePageUsersList(users) {
-//     // Get reference to the users list container
-//     const homePageUsersList = document.getElementById('homePageUsersList');
-//     if (!homePageUsersList) return;
-
-//     // Clear current list
-//     homePageUsersList.innerHTML = '';
-
-//     // Split users into online and offline groups
-//     const onlineUsers = users.filter(user => user.is_online);
-//     const offlineUsers = users.filter(user => !user.is_online);
-
-//     // Add section for online users
-//     if (onlineUsers.length > 0) {
-//         // Create section header
-//         const onlineSection = document.createElement('div');
-//         onlineSection.className = 'users-section';
-//         // onlineSection.innerHTML = '<h3>Online Users</h3>';
-//         homePageUsersList.appendChild(onlineSection);
-
-//         // Add each online user
-//         onlineUsers.forEach(user => createUserItem(user, true, homePageUsersList));
-//     }
-
-//     // Add section for offline users
-//     if (offlineUsers.length > 0) {
-//         // Create section header
-//         const offlineSection = document.createElement('div');
-//         offlineSection.className = 'users-section';
-//         // offlineSection.innerHTML = '<h3>Offline Users</h3>';
-//         homePageUsersList.appendChild(offlineSection);
-
-//         // Add each offline user
-//         offlineUsers.forEach(user => createUserItem(user, false, homePageUsersList));
-//     }
-// }
 
 // /**
 //  * Creates a user item element and appends it to the container
@@ -436,65 +501,7 @@ function loadUsers(users, onlineUsers) {
 //  * @param {boolean} isOnline - Whether the user is online
 //  * @param {HTMLElement} container - Container to append the user item to
 //  */
-// function createUserItem(user, isOnline, container) {
-//     const userItem = document.createElement('div');
-//     userItem.className = `home-user-item ${isOnline ? 'online' : ''}`;
-//     userItem.setAttribute('data-user-id', user.id);
 
-//     userItem.innerHTML = `
-//         <div class="user-status ${isOnline ? 'online-indicator' : 'offline-indicator'}"></div>
-//         <div class="user-name">${user.username}</div>
-//     `;
-
-//     // Add click event to open chat with this user
-//     userItem.addEventListener('click', () => {
-//         showPage('chat-page');
-//         setTimeout(() => {
-//             openChatWithUser(user.id, user.username);
-//         }, 100);
-//     });
-
-//     container.appendChild(userItem);
-// }
-
-// // Open chat with a specific user
-// function openChatWithUser(userId, username) {
-//     currentChatUserId = userId;
-//     messagesLoaded = 0;
-//     hasMoreMessages = true;
-
-//     // Update chat header
-//     const chatHeader = document.getElementById('chatHeader');
-//     if (chatHeader) {
-//         chatHeader.textContent = username;
-//     }
-
-//     // Clear existing messages
-//     const messagesList = document.getElementById('messagesList');
-//     if (messagesList) {
-//         messagesList.innerHTML = '';
-//     }
-
-//     // Load initial messages
-//     loadMessages(0, 10);
-
-//     // Show the chat area
-//     const emptyChat = document.getElementById('emptyChat');
-//     const chatArea = document.getElementById('chatArea');
-
-//     if (emptyChat && chatArea) {
-//         emptyChat.style.display = 'none';
-//         chatArea.style.display = 'flex';
-//     }
-
-//     // Focus on message input
-//     setTimeout(() => {
-//         const messageInput = document.getElementById('messageInput');
-//         if (messageInput) {
-//             messageInput.focus();
-//         }
-//     }, 300);
-// }
 
 // // Load messages for the current chat
 // function loadMessages(offset, limit) {

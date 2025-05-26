@@ -45,10 +45,10 @@ const signup = {
         status: false
     },
     check: () => {
-        (signup.username.status && signup.email.status && signup.age.status && signup.gender.status && signup.firstname.status && signup.lastname.status && signup.password.status)?
-        signup.button.disabled = false
-        :
-        signup.button.disabled = true
+        (signup.username.status && signup.email.status && signup.age.status && signup.gender.status && signup.firstname.status && signup.lastname.status && signup.password.status) ?
+            signup.button.disabled = false
+            :
+            signup.button.disabled = true
     },
 
     alreadyUsed: document.getElementById('alreadyUsed'),
@@ -76,10 +76,10 @@ const login = {
     button: document.getElementById('loginBtn'),
 
     check: () => {
-        (login.emailusername.status && login.password.status)?
-        login.button.disabled = false
-        :
-        login.button.disabled = true;
+        (login.emailusername.status && login.password.status) ?
+            login.button.disabled = false
+            :
+            login.button.disabled = true;
     },
 }
 
@@ -111,25 +111,26 @@ signup.button.addEventListener('click', (event) => {
         },
         body: JSON.stringify(user)
     })
-    .then(response => response.json())
-    .then(data => {
+        .then(response => response.json())
+        .then(data => {
 
-        if (data.message == 'Email or username already used!') {
-            Toast('Email or username already used!')
-        } else if (data.message == 'Please fill in all required fields') {
-            Toast('Please fill in all required fields')
-        } else if (data.message == 'User created') {
-            usernameDisplay.textContent = user.Username; 
-            Toast('Welcome to our forum ✅')
-            showPage('home-page');
-        } else {
+            if (data.message == 'Email or username already used!') {
+                Toast('Email or username already used!')
+            } else if (data.message == 'Please fill in all required fields') {
+                Toast('Please fill in all required fields')
+            } else if (data.message == 'User created') {
+                usernameDisplay.textContent = user.Username;
+                usernameDisplay.classList.remove('hidden')
+                Toast('Welcome to our forum ✅')
+                showPage('home-page');
+            } else {
+                Toast("Error in the server, please try again later 😊")
+            }
+        })
+        .catch((error) => {
             Toast("Error in the server, please try again later 😊")
-        }
-    })
-    .catch((error) => {
-        Toast("Error in the server, please try again later 😊")
-        console.error('error in sign up:', error)
-    })
+            console.error('error in sign up:', error)
+        })
 });
 
 login.emailusername.input.addEventListener('input', () => test(login.emailusername, login));
@@ -149,43 +150,45 @@ login.button.addEventListener('click', (event) => {
         },
         body: JSON.stringify(user)
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message === 'Username or Email not found !') {
-            Toast('Username or Email not found ❌')
-        } else if (data.message === 'Password not correct!') {
-            Toast('Password not correct ❌')
-        } else if (data.message === "Error in the server, please try again !") {
+        .then(response => response.json())
+        .then(data => {
+            if (data.message === 'Username or Email not found !') {
+                Toast('Username or Email not found ❌')
+            } else if (data.message === 'Password not correct!') {
+                Toast('Password not correct ❌')
+            } else if (data.message === "Error in the server, please try again !") {
+                Toast("Error in the server, please try again later 😊")
+            } else {
+                usernameDisplay.textContent = data.username;
+                usernameDisplay.classList.remove('hidden')
+                showPage('home-page')
+                Toast('Welcome back ✅')
+            }
+        })
+        .catch((error) => {
             Toast("Error in the server, please try again later 😊")
-        } else {
-            usernameDisplay.textContent = data.username; 
-            showPage('home-page')
-            Toast('Welcome back ✅')
-        }
-    })
-    .catch((error) => {
-        Toast("Error in the server, please try again later 😊")
-        console.error('error in login :', error)
-    })
+            console.error('error in login :', error)
+        })
 });
 
-document.getElementById('logout').addEventListener('click' , () => {
-    fetch('/api/logout' , {
+document.getElementById('logout').addEventListener('click', () => {
+    fetch('/api/logout', {
         credentials: 'include'
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message === "Failed to delete the session Id from the database!") {
+        .then(response => response.json())
+        .then(data => {
+            if (data.message === "Failed to delete the session Id from the database!") {
+                Toast("Error in the server, please try again later 😊")
+            } else if (data.message === "Session deleted successfully!") {
+                usernameDisplay.classList.add('hidden')
+                showPage('register-login-page')
+                Toast("See you soon 👋🏼")
+            }
+        })
+        .catch((error) => {
             Toast("Error in the server, please try again later 😊")
-        } else if (data.message === "Session deleted successfully!") {
-            showPage('register-login-page')
-            Toast("See you soon 👋🏼")
-        }
-    })
-    .catch((error) => {
-        Toast("Error in the server, please try again later 😊")
-        console.log('error in logout :',error)
-    })
+            console.log('error in logout :', error)
+        })
 })
 
 // utils

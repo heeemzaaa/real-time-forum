@@ -18,14 +18,14 @@ var upgrader = websocket.Upgrader{
 }
 
 var (
-	OnlineUsers = make(map[string]string)
-	AllUsers    = make(map[string]string)
+	CurrentUserId string
+	OnlineUsers   = make(map[string]bool)
+	AllUsers      = make(map[string]string)
 )
 
 func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		// add an error page to show the error in this case
 		return
 	}
 
@@ -47,6 +47,8 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error fetching the userId and username from the database:", err)
 		return
 	}
+
+	CurrentUserId = userID
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -70,6 +72,7 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		g.ActiveConnections[userID] = []*g.Connection{connection}
 	}
 	g.ActiveConnectionsMutex.Unlock()
+
 	GetOnlineUsers(userID)
 	BroadcastUserStatus()
 
@@ -81,7 +84,13 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		BroadcastUserStatus()
 	}()
 
-	time.Sleep(180 * time.Second)
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			log.Printf("Connection closed for user %s: %v", userName, err)
+			break
+		}
+	}
 }
 
 func GetOnlineUsers(userID string) {
@@ -100,40 +109,43 @@ func GetOnlineUsers(userID string) {
 		}
 		if userID != user.ID {
 			users = append(users, user)
-			fmt.Println(user)
 		}
 	}
+
+	for _, u := range users {
+		OnlineUsers[u.ID] = false
+		AllUsers[u.ID] = u.Username
+	}
+
 	g.ActiveConnectionsMutex.Lock()
 	for userID, connections := range g.ActiveConnections {
 		if len(connections) > 0 {
-			OnlineUsers[userID] = connections[0].Username
+			OnlineUsers[userID] = true
 		}
 	}
 	g.ActiveConnectionsMutex.Unlock()
-
-	for _, u := range users {
-		AllUsers[u.ID] = u.Username
-	}
 }
 
 func BroadcastUserStatus() {
 	type OnlineStatus struct {
-		Type     string            `json:"type"`
-		AllUsers map[string]string `json:"allUsers"`
-		Online   map[string]string `json:"online"`
+		Type          string            `json:"type"`
+		OnlineUsers   map[string]bool   `json:"onlineUsers"`
+		AllUsers      map[string]string `json:"allUsers"`
+		CurrentUserId string            `json:"you"`
 	}
 
 	update := OnlineStatus{
-		Type:     "new_connection",
-		AllUsers: AllUsers,
-		Online:   OnlineUsers,
+		Type:          "new_connection",
+		OnlineUsers:   OnlineUsers,
+		AllUsers:      AllUsers,
+		CurrentUserId: CurrentUserId,
 	}
 
 	status, err := json.Marshal(update)
 	if err != nil {
 		log.Println("Error marshling the data:", err)
 	}
-
+	fmt.Println(string(status))
 	g.ActiveConnectionsMutex.Lock()
 	for _, connections := range g.ActiveConnections {
 		for _, conn := range connections {
@@ -178,8 +190,84 @@ func DeleteConnection(userID string, conn *websocket.Conn) {
 
 	if len(connections) == 0 {
 		delete(g.ActiveConnections, userID)
-		delete(OnlineUsers, userID)
 	} else {
 		g.ActiveConnections[userID] = connections
 	}
+}
+
+// GetOnlineUsers returns a list of online users
+func HandleGetOnlineUsers(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		http.Error(w, "Not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	var currentUserID string
+	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", cookie.Value).Scan(&currentUserID)
+	if err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+
+	rows, err := g.DB.Query(`
+        SELECT id, username FROM users WHERE id != ? ORDER BY username
+    `, currentUserID)
+	if err != nil {
+		log.Println("Error getting users:", err)
+		http.Error(w, "Error getting users", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type UserWithStatus struct {
+		ID          string    `json:"id"`
+		Username    string    `json:"username"`
+		IsOnline    bool      `json:"is_online"`
+		LastMessage time.Time `json:"last_message"`
+	}
+
+	var users []UserWithStatus
+	var lastMsgStr string
+
+	for rows.Next() {
+		var user UserWithStatus
+		err := rows.Scan(&user.ID, &user.Username)
+		if err != nil {
+			log.Println("Error scanning user:", err)
+			http.Error(w, "Error reading users", http.StatusInternalServerError)
+			return
+		}
+
+		g.ActiveConnectionsMutex.RLock()
+		connections, exists := g.ActiveConnections[user.ID]
+		user.IsOnline = exists && len(connections) > 0
+		g.ActiveConnectionsMutex.RUnlock()
+
+		err = g.DB.QueryRow(`
+            SELECT MAX(sent_at) FROM Messages m
+            JOIN Conversations c ON m.conversation_id = c.id
+            WHERE (c.user1_id = ? AND c.user2_id = ?) OR (c.user1_id = ? AND c.user2_id = ?)
+        `, currentUserID, user.ID, user.ID, currentUserID).Scan(&lastMsgStr)
+		if err == nil && lastMsgStr != "" {
+			user.LastMessage, err = time.Parse("2006-01-02 15:04:05", lastMsgStr)
+			if err != nil {
+				log.Println("Failed to parse time:", err)
+				user.LastMessage = time.Time{}
+			}
+		} else {
+			user.LastMessage = time.Time{}
+		}
+
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println("Row iteration error:", err)
+		http.Error(w, "Error reading user list", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
 }
