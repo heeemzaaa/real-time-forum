@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	g "real-time-forum/server/globalVar"
 
@@ -18,9 +17,8 @@ var upgrader = websocket.Upgrader{
 }
 
 var (
-	CurrentUserId string
-	OnlineUsers   = make(map[string]bool)
-	AllUsers      = make(map[string]string)
+	OnlineUsers = make(map[string]bool)
+	AllUsers    = make(map[string]string)
 )
 
 func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -47,8 +45,6 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error fetching the userId and username from the database:", err)
 		return
 	}
-
-	CurrentUserId = userID
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -107,38 +103,41 @@ func GetOnlineUsers(userID string) {
 			log.Println("Error scanning the users:", err)
 			return
 		}
-		if userID != user.ID {
-			users = append(users, user)
-		}
+		users = append(users, user)
 	}
 
 	for _, u := range users {
+		if u.ID == userID {
+			continue
+		}
 		OnlineUsers[u.ID] = false
 		AllUsers[u.ID] = u.Username
 	}
 
 	g.ActiveConnectionsMutex.Lock()
-	for userID, connections := range g.ActiveConnections {
+	for id, connections := range g.ActiveConnections {
+		if id == userID {
+			continue
+		}
 		if len(connections) > 0 {
-			OnlineUsers[userID] = true
+			OnlineUsers[id] = true
 		}
 	}
 	g.ActiveConnectionsMutex.Unlock()
 }
 
+// this function broadcast all the news to the front
 func BroadcastUserStatus() {
 	type OnlineStatus struct {
-		Type          string            `json:"type"`
-		OnlineUsers   map[string]bool   `json:"onlineUsers"`
-		AllUsers      map[string]string `json:"allUsers"`
-		CurrentUserId string            `json:"you"`
+		Type        string            `json:"type"`
+		OnlineUsers map[string]bool   `json:"onlineUsers"`
+		AllUsers    map[string]string `json:"allUsers"`
 	}
 
 	update := OnlineStatus{
-		Type:          "new_connection",
-		OnlineUsers:   OnlineUsers,
-		AllUsers:      AllUsers,
-		CurrentUserId: CurrentUserId,
+		Type:        "new_connection",
+		OnlineUsers: OnlineUsers,
+		AllUsers:    AllUsers,
 	}
 
 	status, err := json.Marshal(update)
@@ -195,79 +194,79 @@ func DeleteConnection(userID string, conn *websocket.Conn) {
 	}
 }
 
-// GetOnlineUsers returns a list of online users
-func HandleGetOnlineUsers(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session_id")
-	if err != nil {
-		http.Error(w, "Not authenticated", http.StatusUnauthorized)
-		return
-	}
+// // GetOnlineUsers returns a list of online users
+// func HandleGetOnlineUsers(w http.ResponseWriter, r *http.Request) {
+// 	cookie, err := r.Cookie("session_id")
+// 	if err != nil {
+// 		http.Error(w, "Not authenticated", http.StatusUnauthorized)
+// 		return
+// 	}
 
-	var currentUserID string
-	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", cookie.Value).Scan(&currentUserID)
-	if err != nil {
-		http.Error(w, "Invalid session", http.StatusUnauthorized)
-		return
-	}
+// 	var currentUserID string
+// 	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", cookie.Value).Scan(&currentUserID)
+// 	if err != nil {
+// 		http.Error(w, "Invalid session", http.StatusUnauthorized)
+// 		return
+// 	}
 
-	rows, err := g.DB.Query(`
-        SELECT id, username FROM users WHERE id != ? ORDER BY username
-    `, currentUserID)
-	if err != nil {
-		log.Println("Error getting users:", err)
-		http.Error(w, "Error getting users", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
+// 	rows, err := g.DB.Query(`
+//         SELECT id, username FROM users WHERE id != ? ORDER BY username
+//     `, currentUserID)
+// 	if err != nil {
+// 		log.Println("Error getting users:", err)
+// 		http.Error(w, "Error getting users", http.StatusInternalServerError)
+// 		return
+// 	}
+// 	defer rows.Close()
 
-	type UserWithStatus struct {
-		ID          string    `json:"id"`
-		Username    string    `json:"username"`
-		IsOnline    bool      `json:"is_online"`
-		LastMessage time.Time `json:"last_message"`
-	}
+// 	type UserWithStatus struct {
+// 		ID          string    `json:"id"`
+// 		Username    string    `json:"username"`
+// 		IsOnline    bool      `json:"is_online"`
+// 		LastMessage time.Time `json:"last_message"`
+// 	}
 
-	var users []UserWithStatus
-	var lastMsgStr string
+// 	var users []UserWithStatus
+// 	var lastMsgStr string
 
-	for rows.Next() {
-		var user UserWithStatus
-		err := rows.Scan(&user.ID, &user.Username)
-		if err != nil {
-			log.Println("Error scanning user:", err)
-			http.Error(w, "Error reading users", http.StatusInternalServerError)
-			return
-		}
+// 	for rows.Next() {
+// 		var user UserWithStatus
+// 		err := rows.Scan(&user.ID, &user.Username)
+// 		if err != nil {
+// 			log.Println("Error scanning user:", err)
+// 			http.Error(w, "Error reading users", http.StatusInternalServerError)
+// 			return
+// 		}
 
-		g.ActiveConnectionsMutex.RLock()
-		connections, exists := g.ActiveConnections[user.ID]
-		user.IsOnline = exists && len(connections) > 0
-		g.ActiveConnectionsMutex.RUnlock()
+// 		g.ActiveConnectionsMutex.RLock()
+// 		connections, exists := g.ActiveConnections[user.ID]
+// 		user.IsOnline = exists && len(connections) > 0
+// 		g.ActiveConnectionsMutex.RUnlock()
 
-		err = g.DB.QueryRow(`
-            SELECT MAX(sent_at) FROM Messages m
-            JOIN Conversations c ON m.conversation_id = c.id
-            WHERE (c.user1_id = ? AND c.user2_id = ?) OR (c.user1_id = ? AND c.user2_id = ?)
-        `, currentUserID, user.ID, user.ID, currentUserID).Scan(&lastMsgStr)
-		if err == nil && lastMsgStr != "" {
-			user.LastMessage, err = time.Parse("2006-01-02 15:04:05", lastMsgStr)
-			if err != nil {
-				log.Println("Failed to parse time:", err)
-				user.LastMessage = time.Time{}
-			}
-		} else {
-			user.LastMessage = time.Time{}
-		}
+// 		err = g.DB.QueryRow(`
+//             SELECT MAX(sent_at) FROM Messages m
+//             JOIN Conversations c ON m.conversation_id = c.id
+//             WHERE (c.user1_id = ? AND c.user2_id = ?) OR (c.user1_id = ? AND c.user2_id = ?)
+//         `, currentUserID, user.ID, user.ID, currentUserID).Scan(&lastMsgStr)
+// 		if err == nil && lastMsgStr != "" {
+// 			user.LastMessage, err = time.Parse("2006-01-02 15:04:05", lastMsgStr)
+// 			if err != nil {
+// 				log.Println("Failed to parse time:", err)
+// 				user.LastMessage = time.Time{}
+// 			}
+// 		} else {
+// 			user.LastMessage = time.Time{}
+// 		}
 
-		users = append(users, user)
-	}
+// 		users = append(users, user)
+// 	}
 
-	if err := rows.Err(); err != nil {
-		log.Println("Row iteration error:", err)
-		http.Error(w, "Error reading user list", http.StatusInternalServerError)
-		return
-	}
+// 	if err := rows.Err(); err != nil {
+// 		log.Println("Row iteration error:", err)
+// 		http.Error(w, "Error reading user list", http.StatusInternalServerError)
+// 		return
+// 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
-}
+// 	w.Header().Set("Content-Type", "application/json")
+// 	json.NewEncoder(w).Encode(users)
+// }
