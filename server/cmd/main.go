@@ -45,8 +45,8 @@ func main() {
 	http.HandleFunc("/api/add-comment", h.HandleAddComment)
 
 	// New Chat API endpoints
-	// http.HandleFunc("/api/ws", h.HandleWebSocket)
 	http.HandleFunc("/api/ws", h.MyHandleWebSocket)
+	// http.HandleFunc("/api/ws", h.HandleWebSocket)
 	// http.HandleFunc("/api/get-online-users", h.HandleGetOnlineUsers)
 	// http.HandleFunc("/api/get-messages", h.HandleGetMessages)
 

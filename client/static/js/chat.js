@@ -14,11 +14,28 @@ function connectWebSocket() {
 
     socket.onmessage = (event) => {
         try {
+            document.getElementById('logout').addEventListener('click', () => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.close(1000, "User logged out");
+                }
+            })
+
             let data = JSON.parse(event.data)
             let onlineUsers = data.onlineUsers
             let allUsers = data.allUsers
-            let you = data.you
-            loadUsers(allUsers, onlineUsers, you)
+            console.log(data.you)
+            fetch('/api/check-session', {
+                credentials: 'include',
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.message === "ok") {
+                        loadUsers(allUsers, onlineUsers, result.userID)
+                    }
+                }).catch((e) => {
+                    console.error(e)
+                });
+
         } catch (e) {
             console.error(e)
         }
@@ -33,19 +50,19 @@ function connectWebSocket() {
     }
 }
 
-function loadUsers(users, onlineUsers, you) {
+function loadUsers(users, onlineUsers, currentUserId) {
     userList.innerHTML = ''
+
     for (let userID in users) {
-
-        if (userID === you) {
-            continue;
+        if (userID == currentUserId) {
+            continue
         }
-
         let userStatus = document.createElement('div')
         userStatus.classList.add('user-item');
-        userStatus.setAttribute('data-user-id', userID);
+        userStatus.setAttribute('data-user-id', userID)
 
-        if (onlineUsers[userID] === true) {
+
+        if (onlineUsers[userID] && userID != currentUserId) {
             userStatus.classList.add('online');
             userStatus.innerHTML = `
                 <div class="user-status online-indicator"></div>
@@ -58,10 +75,10 @@ function loadUsers(users, onlineUsers, you) {
                 <div class="user-name">${users[userID]}</div>
             `
         }
-
         userList.appendChild(userStatus)
     }
 }
+
 
 
 // // Update the UI to reflect online status
@@ -259,21 +276,6 @@ function loadUsers(users, onlineUsers, you) {
 //     // }, 300);
 // }
 
-
-
-
-
-// this function close the websocket if the client logs out
-// function closeConnection() {
-//     if (socket.readyState === WebSocket.OPEN) {
-//         socket.close(1000, "User logged out");
-//     }
-// }
-
-// // check if the client clicked the logout button
-// document.getElementById('logout').addEventListener('click', () => {
-//     closeConnection()
-// })
 
 // Connect to the WebSocket server
 // function connectWebSocket() {

@@ -1,7 +1,6 @@
 package migration
 
 import (
-	"fmt"
 	"log"
 	"os"
 	g "real-time-forum/server/globalVar"
@@ -17,10 +16,8 @@ func Migrate() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	_, err = g.DB.Exec(string(query))
 	if err != nil {
-		fmt.Println(3)
 		log.Fatal(err)
 	}
 

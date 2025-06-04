@@ -130,6 +130,7 @@ body {
     flex-direction: column;
     min-height: 180px;
     margin-bottom: 30px;
+    margin-top: 3rem;
     box-sizing: border-box;
     transition: transform 0.2s, box-shadow 0.2s;
     width: 100%;

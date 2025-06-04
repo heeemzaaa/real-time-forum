@@ -16,10 +16,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-var (
-	OnlineUsers = make(map[string]bool)
-	AllUsers    = make(map[string]string)
-)
+var ()
 
 func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -69,15 +66,15 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	g.ActiveConnectionsMutex.Unlock()
 
-	GetOnlineUsers(userID)
-	BroadcastUserStatus()
+	// GetOnlineUsers(userID)
+	BroadcastUserStatus(userID)
 
 	defer func() {
 		log.Printf("Cleaning up connection for user %s", userName)
 		conn.Close()
 		DeleteConnection(userID, conn)
-		GetOnlineUsers(userID)
-		BroadcastUserStatus()
+		// GetOnlineUsers(userID)
+		BroadcastUserStatus(userID)
 	}()
 
 	for {
@@ -89,11 +86,14 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetOnlineUsers(userID string) {
+func GetOnlineUsers(userID string) (map[string]bool, map[string]string) {
+	var OnlineUsers = make(map[string]bool)
+	var AllUsers = make(map[string]string)
+
 	rows, err := g.DB.Query("SELECT id,username FROM users")
 	if err != nil {
 		log.Println("Error selecting the users", err)
-		return
+		return nil, nil
 	}
 	var users []g.User
 	for rows.Next() {
@@ -101,60 +101,62 @@ func GetOnlineUsers(userID string) {
 		err = rows.Scan(&user.ID, &user.Username)
 		if err != nil {
 			log.Println("Error scanning the users:", err)
-			return
+			return nil, nil
 		}
 		users = append(users, user)
 	}
 
 	for _, u := range users {
-		if u.ID == userID {
-			continue
-		}
 		OnlineUsers[u.ID] = false
 		AllUsers[u.ID] = u.Username
 	}
 
 	g.ActiveConnectionsMutex.Lock()
 	for id, connections := range g.ActiveConnections {
-		if id == userID {
-			continue
-		}
 		if len(connections) > 0 {
 			OnlineUsers[id] = true
 		}
 	}
 	g.ActiveConnectionsMutex.Unlock()
+	return OnlineUsers, AllUsers
 }
 
 // this function broadcast all the news to the front
-func BroadcastUserStatus() {
-	type OnlineStatus struct {
+func BroadcastUserStatus(userID string) {
+	onlineUsers, allUsers := GetOnlineUsers(userID)
+
+	if onlineUsers == nil || allUsers == nil {
+		log.Println("Error: failed to get online/all users")
+		return
+	}
+
+	update := struct {
 		Type        string            `json:"type"`
 		OnlineUsers map[string]bool   `json:"onlineUsers"`
 		AllUsers    map[string]string `json:"allUsers"`
-	}
-
-	update := OnlineStatus{
+	}{
 		Type:        "new_connection",
-		OnlineUsers: OnlineUsers,
-		AllUsers:    AllUsers,
+		OnlineUsers: onlineUsers,
+		AllUsers:    allUsers,
 	}
 
 	status, err := json.Marshal(update)
 	if err != nil {
-		log.Println("Error marshling the data:", err)
+		log.Println("Error marshaling status:", err)
+		return
 	}
+
 	fmt.Println(string(status))
+
 	g.ActiveConnectionsMutex.Lock()
 	for _, connections := range g.ActiveConnections {
 		for _, conn := range connections {
 			conn.WriteMu.Lock()
 			err := conn.Conn.WriteMessage(websocket.TextMessage, status)
-			if err != nil {
-				log.Println("Error writing the message:", err)
-				return
-			}
 			conn.WriteMu.Unlock()
+			if err != nil {
+				log.Println("Error writing WebSocket message:", err)
+			}
 		}
 	}
 	g.ActiveConnectionsMutex.Unlock()

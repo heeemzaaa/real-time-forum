@@ -26,7 +26,10 @@ function initializePage() {
 // Session check on page load
 window.addEventListener('DOMContentLoaded', () => {
   initializePage();
+  checkSession()
+});
 
+function checkSession() {
   fetch('/api/check-session', {
     credentials: 'include',
   })
@@ -40,7 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }).catch(() => {
       showPage('register-login-page');
     });
-});
+}
 
 // Page navigation
 function showPage(pageId) {
@@ -100,10 +103,10 @@ function displayNoPosts() {
   postsContainer.appendChild(noPosts);
 }
 
-function renderPosts(posts) {  
+function renderPosts(posts) {
   posts.forEach(post => {
     // console.log("this is the posts:",post);
-    
+
     const postCard = document.createElement('div');
     postCard.id = "postCard";
     postCard.addEventListener('click', () => {
@@ -113,7 +116,7 @@ function renderPosts(posts) {
 
     let Categories = post.categories
     // console.log(Categories);
-    
+
 
     // Format date to be more readable
     const createdDate = new Date(post.created_at);

@@ -70,8 +70,8 @@ func CheckSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var expiration time.Time
-	var username string
-	err = g.DB.QueryRow("SELECT username,expires_at FROM Session WHERE id = ?", cookie.Value).Scan(&username, &expiration)
+	var userID string
+	err = g.DB.QueryRow("SELECT user_id,expires_at FROM Session WHERE id = ?", cookie.Value).Scan(&userID, &expiration)
 	if err != nil || time.Now().After(expiration) {
 		log.Println("Error:" , err)
 		w.WriteHeader(http.StatusUnauthorized)
@@ -79,5 +79,5 @@ func CheckSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "ok", "username": username})
+	json.NewEncoder(w).Encode(map[string]string{"message": "ok", "userID": userID})
 }
