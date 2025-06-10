@@ -94,4 +94,7 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages) {
     }
 }
 
+function openBox() {
+    
+}
 
