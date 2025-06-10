@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
+	"html"
 	"log"
 	"net/http"
+	"time"
 
 	g "real-time-forum/server/globalVar"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -15,8 +17,6 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
-
-var ()
 
 func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -66,22 +66,88 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	g.ActiveConnectionsMutex.Unlock()
 
-	// GetOnlineUsers(userID)
 	BroadcastUserStatus(userID)
 
 	defer func() {
 		log.Printf("Cleaning up connection for user %s", userName)
 		conn.Close()
 		DeleteConnection(userID, conn)
-		// GetOnlineUsers(userID)
 		BroadcastUserStatus(userID)
 	}()
 
 	for {
-		_, _, err := conn.ReadMessage()
+		conn.SetReadDeadline(time.Now().Add(180 * time.Second))
+		var message g.ChatMessage
+		err = conn.ReadJSON(&message)
 		if err != nil {
-			log.Printf("Connection closed for user %s: %v", userName, err)
-			break
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				log.Printf("WebSocket error for user %s: %v", userName, err)
+			} else {
+				log.Printf("WebSocket closed for user %s: %v", userName, err)
+			}
+			return
+		}
+
+		message.SenderID = userID
+		message.SenderName = userName
+		message.Timestamp = time.Now()
+		message.Content = html.EscapeString(message.Content)
+		messageID := uuid.New().String()
+
+		var conversationID string
+		err = g.DB.QueryRow(`
+            SELECT id FROM Conversations
+            WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
+        `, message.SenderID, message.ReceiverID, message.ReceiverID, message.SenderID).Scan(&conversationID)
+		if err != nil {
+			conversationID = uuid.New().String()
+			_, err = g.DB.Exec(`
+                INSERT INTO Conversations (id, user1_id, user2_id)
+                VALUES (?, ?, ?)
+            `, conversationID, message.SenderID, message.ReceiverID)
+			if err != nil {
+				log.Println("Error creating conversation:", err)
+				continue
+			}
+		}
+
+		_, err = g.DB.Exec(`
+            INSERT INTO Messages (id, conversation_id, sender_id, content)
+            VALUES (?, ?, ?, ?)
+        `, messageID, conversationID, message.SenderID, message.Content)
+		if err != nil {
+			log.Println("Error saving message:", err)
+			continue
+		}
+
+		g.ActiveConnectionsMutex.RLock()
+		senderConnections, senderExists := g.ActiveConnections[message.SenderID]
+		g.ActiveConnectionsMutex.RUnlock()
+
+		if senderExists {
+			for _, senderConn := range senderConnections {
+				senderConn.WriteMu.Lock()
+				err = senderConn.Conn.WriteJSON(message)
+				senderConn.WriteMu.Unlock()
+				if err != nil {
+					log.Println("Error sending confirmation to sender:", err)
+				}
+			}
+		}
+
+		g.ActiveConnectionsMutex.RLock()
+		receiverConnections, receiverExists := g.ActiveConnections[message.ReceiverID]
+		g.ActiveConnectionsMutex.RUnlock()
+
+		if receiverExists {
+			for _, receiverConn := range receiverConnections {
+				receiverConn.WriteMu.Lock()
+				err = receiverConn.Conn.WriteJSON(message)
+				receiverConn.WriteMu.Unlock()
+				if err != nil {
+					log.Println("Error sending message to receiver:", err)
+				}
+			}
 		}
 	}
 }
@@ -121,23 +187,22 @@ func GetOnlineUsers(userID string) (map[string]bool, map[string]string) {
 	return OnlineUsers, AllUsers
 }
 
-// this function broadcast all the news to the front
+// this function broadcast all the informations to all users
 func BroadcastUserStatus(userID string) {
 	onlineUsers, allUsers := GetOnlineUsers(userID)
-
 	if onlineUsers == nil || allUsers == nil {
 		log.Println("Error: failed to get online/all users")
 		return
 	}
 
 	update := struct {
-		Type        string            `json:"type"`
-		OnlineUsers map[string]bool   `json:"onlineUsers"`
-		AllUsers    map[string]string `json:"allUsers"`
+		Type         string            `json:"type"`
+		OnlineUsers  map[string]bool   `json:"onlineUsers"`
+		AllUsers     map[string]string `json:"allUsers"`
 	}{
-		Type:        "new_connection",
-		OnlineUsers: onlineUsers,
-		AllUsers:    allUsers,
+		Type:         "new_connection",
+		OnlineUsers:  onlineUsers,
+		AllUsers:     allUsers,
 	}
 
 	status, err := json.Marshal(update)
@@ -145,8 +210,6 @@ func BroadcastUserStatus(userID string) {
 		log.Println("Error marshaling status:", err)
 		return
 	}
-
-	fmt.Println(string(status))
 
 	g.ActiveConnectionsMutex.Lock()
 	for _, connections := range g.ActiveConnections {
@@ -196,79 +259,98 @@ func DeleteConnection(userID string, conn *websocket.Conn) {
 	}
 }
 
-// // GetOnlineUsers returns a list of online users
-// func HandleGetOnlineUsers(w http.ResponseWriter, r *http.Request) {
-// 	cookie, err := r.Cookie("session_id")
-// 	if err != nil {
-// 		http.Error(w, "Not authenticated", http.StatusUnauthorized)
-// 		return
-// 	}
+// Get messages between current user and the specified user
+func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-// 	var currentUserID string
-// 	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", cookie.Value).Scan(&currentUserID)
-// 	if err != nil {
-// 		http.Error(w, "Invalid session", http.StatusUnauthorized)
-// 		return
-// 	}
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		http.Error(w, "Not authenticated", http.StatusUnauthorized)
+		return
+	}
 
-// 	rows, err := g.DB.Query(`
-//         SELECT id, username FROM users WHERE id != ? ORDER BY username
-//     `, currentUserID)
-// 	if err != nil {
-// 		log.Println("Error getting users:", err)
-// 		http.Error(w, "Error getting users", http.StatusInternalServerError)
-// 		return
-// 	}
-// 	defer rows.Close()
+	var currentUserID string
+	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", cookie.Value).Scan(&currentUserID)
+	if err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
 
-// 	type UserWithStatus struct {
-// 		ID          string    `json:"id"`
-// 		Username    string    `json:"username"`
-// 		IsOnline    bool      `json:"is_online"`
-// 		LastMessage time.Time `json:"last_message"`
-// 	}
+	var requestBody struct {
+		UserID string `json:"user_id"`
+		Offset int    `json:"offset"`
+		Limit  int    `json:"limit"`
+	}
 
-// 	var users []UserWithStatus
-// 	var lastMsgStr string
+	err = json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
 
-// 	for rows.Next() {
-// 		var user UserWithStatus
-// 		err := rows.Scan(&user.ID, &user.Username)
-// 		if err != nil {
-// 			log.Println("Error scanning user:", err)
-// 			http.Error(w, "Error reading users", http.StatusInternalServerError)
-// 			return
-// 		}
+	if requestBody.Limit == 0 {
+		requestBody.Limit = 10
+	}
 
-// 		g.ActiveConnectionsMutex.RLock()
-// 		connections, exists := g.ActiveConnections[user.ID]
-// 		user.IsOnline = exists && len(connections) > 0
-// 		g.ActiveConnectionsMutex.RUnlock()
+	// Get conversation ID
+	var conversationID string
+	err = g.DB.QueryRow(`
+		SELECT id FROM Conversations
+		WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
+	`, currentUserID, requestBody.UserID, requestBody.UserID, currentUserID).Scan(&conversationID)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error fetching the conversation"})
+		return
+	}
 
-// 		err = g.DB.QueryRow(`
-//             SELECT MAX(sent_at) FROM Messages m
-//             JOIN Conversations c ON m.conversation_id = c.id
-//             WHERE (c.user1_id = ? AND c.user2_id = ?) OR (c.user1_id = ? AND c.user2_id = ?)
-//         `, currentUserID, user.ID, user.ID, currentUserID).Scan(&lastMsgStr)
-// 		if err == nil && lastMsgStr != "" {
-// 			user.LastMessage, err = time.Parse("2006-01-02 15:04:05", lastMsgStr)
-// 			if err != nil {
-// 				log.Println("Failed to parse time:", err)
-// 				user.LastMessage = time.Time{}
-// 			}
-// 		} else {
-// 			user.LastMessage = time.Time{}
-// 		}
+	// Get messages
+	rows, err := g.DB.Query(`
+		SELECT m.id, m.sender_id, u.username, m.content, m.sent_at
+		FROM Messages m
+		JOIN users u ON m.sender_id = u.id
+		WHERE m.conversation_id = ?
+		ORDER BY m.sent_at DESC
+		LIMIT ? OFFSET ?
+	`, conversationID, requestBody.Limit, requestBody.Offset)
+	if err != nil {
+		log.Println("Error getting messages:", err)
+		http.Error(w, "Error getting messages", http.StatusInternalServerError)
+		return
+	}
 
-// 		users = append(users, user)
-// 	}
+	var messages []g.Message
 
-// 	if err := rows.Err(); err != nil {
-// 		log.Println("Row iteration error:", err)
-// 		http.Error(w, "Error reading user list", http.StatusInternalServerError)
-// 		return
-// 	}
+	for rows.Next() {
+		var message g.Message
+		err := rows.Scan(&message.ID, &message.SenderID, &message.Username, &message.Content, &message.Timestamp)
+		if err != nil {
+			log.Println("Error scanning message:", err)
+			rows.Close()
+			http.Error(w, "Error reading messages", http.StatusInternalServerError)
+			return
+		}
+		messages = append(messages, message)
+	}
 
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(users)
-// }
+	if err := rows.Err(); err != nil {
+		log.Println("Row iteration error:", err)
+		rows.Close()
+		http.Error(w, "Error reading message list", http.StatusInternalServerError)
+		return
+	}
+
+	rows.Close()
+
+	// Reverse for chronological order
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(messages)
+}
