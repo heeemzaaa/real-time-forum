@@ -95,6 +95,7 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages) {
 }
 
 function openBox() {
-    
+    // up up 
+    let hamza = 24
 }
 
