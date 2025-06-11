@@ -253,8 +253,10 @@ function submitComment(postId) {
             if (result.message === "Comment added successfully") {
                 document.getElementById('commentContent').value = ""
                 loadComments(postId)
+            } else if (result.message === "You must be logged in to comment"){
+                showPage('register-login-page')
             } else {
-                alert("Failed to add comment")
+                alert("You can't add this comment")
             }
         })
         .catch(error => {

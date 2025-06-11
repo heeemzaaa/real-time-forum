@@ -1,4 +1,4 @@
-const pages = ['home-page', 'register-login-page', 'add-post-page', 'profile-page', 'single-post-page', 'chat-page'];
+const pages = ['home-page', 'register-login-page', 'add-post-page', 'profile-page', 'single-post-page'];
 const navbar = document.getElementById('navbar');
 const postsContainer = document.getElementById('postsContainer');
 const userMenu = document.querySelector('.user-menu');
@@ -19,7 +19,6 @@ function initializePage() {
   // Add event listeners for navigation
   toHomeButton.addEventListener('click', () => showPage('home-page'));
   toPostButton.addEventListener('click', () => showPage('add-post-page'));
-  toMessagesButton.addEventListener('click', () => showPage('chat-page'));
 
 }
 

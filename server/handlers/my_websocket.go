@@ -77,7 +77,9 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		conn.SetReadDeadline(time.Now().Add(180 * time.Second))
+
 		var message g.ChatMessage
+
 		err = conn.ReadJSON(&message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
@@ -87,7 +89,7 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-
+		log.Println(message)
 		message.SenderID = userID
 		message.SenderName = userName
 		message.Timestamp = time.Now()
@@ -152,40 +154,37 @@ func MyHandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// this function returns both online users and all users
 func GetOnlineUsers(userID string) (map[string]bool, map[string]string) {
 	var OnlineUsers = make(map[string]bool)
 	var AllUsers = make(map[string]string)
 
 	rows, err := g.DB.Query("SELECT id,username FROM users")
 	if err != nil {
-		log.Println("Error selecting the users", err)
+		log.Println("Error selecting users:", err)
 		return nil, nil
 	}
-	var users []g.User
+	defer rows.Close()
+
 	for rows.Next() {
-		var user g.User
-		err = rows.Scan(&user.ID, &user.Username)
-		if err != nil {
-			log.Println("Error scanning the users:", err)
-			return nil, nil
+		var id, name string
+		if err := rows.Scan(&id, &name); err != nil {
+			log.Println("Error scanning user:", err)
+			continue
 		}
-		users = append(users, user)
+		OnlineUsers[id] = false
+		AllUsers[id] = name
 	}
 
-	for _, u := range users {
-		OnlineUsers[u.ID] = false
-		AllUsers[u.ID] = u.Username
+	g.ActiveConnectionsMutex.RLock()
+	for id := range g.ActiveConnections {
+		OnlineUsers[id] = true
 	}
+	g.ActiveConnectionsMutex.RUnlock()
 
-	g.ActiveConnectionsMutex.Lock()
-	for id, connections := range g.ActiveConnections {
-		if len(connections) > 0 {
-			OnlineUsers[id] = true
-		}
-	}
-	g.ActiveConnectionsMutex.Unlock()
 	return OnlineUsers, AllUsers
 }
+
 
 // this function broadcast all the informations to all users
 func BroadcastUserStatus(userID string) {
@@ -195,14 +194,37 @@ func BroadcastUserStatus(userID string) {
 		return
 	}
 
+	lastMessages := make(map[string]string)
+	rows, err := g.DB.Query(`
+		SELECT 
+			CASE 
+				WHEN user1_id = ? THEN user2_id 
+				ELSE user1_id 
+			END as other_user,
+			MAX(m.created_at) as last_msg_time
+		FROM Conversations c
+		JOIN Messages m ON m.conversation_id = c.id
+		WHERE user1_id = ? OR user2_id = ?
+		GROUP BY other_user
+	`, userID, userID, userID)
+	if err == nil {
+		for rows.Next() {
+			var otherUserID, lastTime string
+			rows.Scan(&otherUserID, &lastTime)
+			lastMessages[otherUserID] = lastTime
+		}
+	}
+
 	update := struct {
 		Type         string            `json:"type"`
 		OnlineUsers  map[string]bool   `json:"onlineUsers"`
 		AllUsers     map[string]string `json:"allUsers"`
+		LastMessages map[string]string `json:"lastMessages"`
 	}{
 		Type:         "new_connection",
 		OnlineUsers:  onlineUsers,
 		AllUsers:     allUsers,
+		LastMessages: lastMessages,
 	}
 
 	status, err := json.Marshal(update)
@@ -215,16 +237,14 @@ func BroadcastUserStatus(userID string) {
 	for _, connections := range g.ActiveConnections {
 		for _, conn := range connections {
 			conn.WriteMu.Lock()
-			err := conn.Conn.WriteMessage(websocket.TextMessage, status)
+			conn.Conn.WriteMessage(websocket.TextMessage, status)
 			conn.WriteMu.Unlock()
-			if err != nil {
-				log.Println("Error writing WebSocket message:", err)
-			}
 		}
 	}
 	g.ActiveConnectionsMutex.Unlock()
 }
 
+// this function deletes the connections
 func DeleteConnection(userID string, conn *websocket.Conn) {
 	g.ActiveConnectionsMutex.Lock()
 	defer g.ActiveConnectionsMutex.Unlock()

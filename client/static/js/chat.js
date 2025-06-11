@@ -1,5 +1,4 @@
 const userList = document.getElementById('homePageUsersList')
-const chatUserList = document.getElementById('usersList')
 let currentChatUserId = ""
 let hasMoreMessages = false
 let isLoadingMoreMessages = false
@@ -49,7 +48,6 @@ function connectWebSocket() {
 
 function loadUsers(users, onlineUsers, currentUserId, lastMessages) {
     userList.innerHTML = ''
-    chatUserList.innerHTML = ''
 
     let userEntries = Object.entries(users).filter(([id]) => id !== currentUserId)
 
@@ -58,13 +56,13 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages) {
         let bTime = lastMessages[b[0]]
 
         if (aTime && bTime) {
-            return new Date(bTime) - new Date(aTime) // recent first
+            return new Date(bTime) - new Date(aTime)
         } else if (aTime) {
             return -1
         } else if (bTime) {
             return 1
         } else {
-            return a[1].localeCompare(b[1]) // alphabetical
+            return a[1].localeCompare(b[1])
         }
     })
 
@@ -87,15 +85,46 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages) {
             `
         }
         userList.appendChild(userStatus)
-
-        // to understand later
-        let clone = userStatus.cloneNode(true)
-        chatUserList.appendChild(clone)
     }
 }
 
-function openBox() {
-    // up up 
-    let hamza = 24
+document.addEventListener('click', function (e) {
+    if (e.target.closest('.user-item')) {
+        const userEl = e.target.closest('.user-item')
+        const userId = userEl.getAttribute('data-user-id')
+        const username = userEl.querySelector('.user-name').innerText
+        openChatPopup(userId, username)
+    }
+})
+
+function openChatPopup(userId, username) {
+    const existingPopup = document.querySelector('.chat-popup')
+    if (existingPopup) {
+        existingPopup.remove()
+    }
+
+    const popup = document.createElement('div')
+    popup.className = 'chat-popup'
+    popup.id = `chat-popup-${userId}`
+
+    popup.innerHTML = `
+        <div class="chat-popup-header">
+            <span>${username}</span>
+            <span class="close-chat" title="Close">&times;</span>
+        </div>
+        <div class="chat-popup-body">
+            <!-- Future messages will go here -->
+        </div>
+        <div class="chat-popup-footer">
+            <textarea placeholder="Type a message..."></textarea>
+            <i class="fa-solid fa-paper-plane send-popup-icon"></i>
+        </div>
+    `
+    document.body.appendChild(popup)
+
+    popup.querySelector('.close-chat').addEventListener('click', () => {
+        popup.remove()
+    })
 }
+
 
