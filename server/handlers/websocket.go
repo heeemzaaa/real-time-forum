@@ -89,7 +89,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		// log.Println(message)
 		message.SenderID = userID
 		message.SenderName = userName
 		message.Timestamp = time.Now()
@@ -151,6 +150,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		BroadcastUserStatus(userID)
 	}
 }
 
@@ -186,63 +186,71 @@ func GetOnlineUsers(userID string) (map[string]bool, map[string]string) {
 }
 
 // this function broadcast all the informations to all users
-func BroadcastUserStatus(userID string) {
-	onlineUsers, allUsers := GetOnlineUsers(userID)
+func BroadcastUserStatus(triggerUserID string) {
+	onlineUsers, allUsers := GetOnlineUsers(triggerUserID)
 	if onlineUsers == nil || allUsers == nil {
 		log.Println("Error: failed to get online/all users")
 		return
 	}
 
-	lastMessages := make(map[string]string)
-	rows, err := g.DB.Query(`
-		SELECT 
-			CASE 
-				WHEN user1_id = ? THEN user2_id 
-				ELSE user1_id 
-			END as other_user,
-			MAX(m.created_at) as last_msg_time
-		FROM Conversations c
-		JOIN Messages m ON m.conversation_id = c.id
-		WHERE user1_id = ? OR user2_id = ?
-		GROUP BY other_user
-	`, userID, userID, userID)
-	if err == nil {
+	g.ActiveConnectionsMutex.Lock()
+	defer g.ActiveConnectionsMutex.Unlock()
+
+	for userID, connections := range g.ActiveConnections {
+		lastMessages := make(map[string]string)
+
+		rows, err := g.DB.Query(`
+			SELECT 
+				CASE 
+					WHEN user1_id = ? THEN user2_id 
+					ELSE user1_id 
+				END as other_user,
+				MAX(m.sent_at) as last_msg_time
+			FROM Conversations c
+			JOIN Messages m ON m.conversation_id = c.id
+			WHERE user1_id = ? OR user2_id = ?
+			GROUP BY other_user
+		`, userID, userID, userID)
+		if err != nil {
+			log.Println("Error building lastMessages for user", userID, ":", err)
+			continue
+		}
+
 		for rows.Next() {
 			var otherUserID, lastTime string
 			rows.Scan(&otherUserID, &lastTime)
 			lastMessages[otherUserID] = lastTime
 		}
-	}
+		rows.Close()
 
-	update := struct {
-		Type         string            `json:"type"`
-		OnlineUsers  map[string]bool   `json:"onlineUsers"`
-		AllUsers     map[string]string `json:"allUsers"`
-		LastMessages map[string]string `json:"lastMessages"`
-		You          string            `json:"you"`
-	}{
-		Type:         "new_connection",
-		OnlineUsers:  onlineUsers,
-		AllUsers:     allUsers,
-		LastMessages: lastMessages,
-		You:          userID,
-	}
+		// Send personalized update to each user's active connections
+		update := struct {
+			Type         string            `json:"type"`
+			OnlineUsers  map[string]bool   `json:"onlineUsers"`
+			AllUsers     map[string]string `json:"allUsers"`
+			LastMessages map[string]string `json:"lastMessages"`
+		}{
+			Type:         "new_connection",
+			OnlineUsers:  onlineUsers,
+			AllUsers:     allUsers,
+			LastMessages: lastMessages,
+		}
 
-	status, err := json.Marshal(update)
-	if err != nil {
-		log.Println("Error marshaling status:", err)
-		return
-	}
+		status, err := json.Marshal(update)
+		if err != nil {
+			log.Println("Error marshaling user status update:", err)
+			continue
+		}
 
-	g.ActiveConnectionsMutex.Lock()
-	for _, connections := range g.ActiveConnections {
 		for _, conn := range connections {
 			conn.WriteMu.Lock()
-			conn.Conn.WriteMessage(websocket.TextMessage, status)
+			err = conn.Conn.WriteMessage(websocket.TextMessage, status)
 			conn.WriteMu.Unlock()
+			if err != nil {
+				log.Println("Error writing user status update to", userID, ":", err)
+			}
 		}
 	}
-	g.ActiveConnectionsMutex.Unlock()
 }
 
 // this function deletes the connections

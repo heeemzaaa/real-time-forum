@@ -13,6 +13,7 @@ function connectWebSocket() {
                 let onlineUsers = data.onlineUsers
                 let allUsers = data.allUsers
                 let lastMessages = data.lastMessages || {}
+                console.log(lastMessages)
                 fetch('/api/check-session', {
                     credentials: 'include',
                 })
@@ -31,7 +32,7 @@ function connectWebSocket() {
             }
 
             if (data.sender_id && data.receiver_id && data.content) {
-                console.log(data)
+                // console.log(data)
                 appendMessageToPopup(data)
             }
 
@@ -67,8 +68,11 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages) {
     let userEntries = Object.entries(users).filter(([id]) => id !== currentUserId)
 
     userEntries.sort((a, b) => {
-        let aTime = lastMessages[a[0]]
-        let bTime = lastMessages[b[0]]
+        let aTime = lastMessages[a[0]] || ""
+        let bTime = lastMessages[b[0]] || ""
+
+        console.log("atime: ", aTime)
+        console.log("btime: ", bTime)
 
         if (aTime && bTime) {
             return new Date(bTime) - new Date(aTime)
