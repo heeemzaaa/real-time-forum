@@ -1,157 +1,377 @@
 package handlers
 
-// var upgrader = websocket.Upgrader{
-// 	ReadBufferSize:  1024,
-// 	WriteBufferSize: 1024,
-// 	CheckOrigin: func(r *http.Request) bool {
-// 		return true // Allow all connections (you might want to restrict this in production)
-// 	},
-// }
+import (
+	"encoding/json"
+	"html"
+	"log"
+	"net/http"
+	"time"
 
-// HandleWebSocket handles WebSocket connections
-// func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-// 	// Get the user ID from the session
-// 	cookie, err := r.Cookie("session_id")
-// 	if err != nil {
-// 		http.Error(w, "Not authenticated", http.StatusUnauthorized)
-// 		return
-// 	}
+	g "real-time-forum/server/globalVar"
 
-// 	var userID, username string
-// 	err = g.DB.QueryRow("SELECT user_id, username FROM Session WHERE id = ?", cookie.Value).Scan(&userID, &username)
-// 	if err != nil {
-// 		http.Error(w, "Invalid session", http.StatusUnauthorized)
-// 		return
-// 	}
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+)
 
-// 	// Upgrade the HTTP connection to a WebSocket connection
-// 	conn, err := upgrader.Upgrade(w, r, nil)
-// 	if err != nil {
-// 		log.Println("Error upgrading to WebSocket:", err)
-// 		return
-// 	}
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
 
-// 	// Create a connection object
-// 	connection := &g.Connection{
-// 		Conn:     conn,
-// 		UserID:   userID,
-// 		Username: username,
-// 	}
+func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
-// 	// Add the connection to the user's connections
-// 	g.ActiveConnectionsMutex.Lock()
-// 	if connections, exists := g.ActiveConnections[userID]; exists {
-// 		// Add this connection to the existing slice
-// 		g.ActiveConnections[userID] = append(connections, connection)
-// 	} else {
-// 		// Create a new slice with this connection
-// 		g.ActiveConnections[userID] = []*g.Connection{connection}
-// 	}
-// 	g.ActiveConnectionsMutex.Unlock()
+	w.Header().Set("Content-Type", "application/json")
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"Error": "Error in the session !"})
+		log.Println("Error in the session:", err)
+		return
+	}
 
-// 	// Broadcast to all clients about online status changes
-// 	BroadcastUserStatus()
+	var userID string
+	var userName string
+	err = g.DB.QueryRow("SELECT user_id,username FROM session WHERE id = ?", cookie.Value).Scan(&userID, &userName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"Error": "Error in the server"})
+		log.Println("Error fetching the userId and username from the database:", err)
+		return
+	}
 
-// 	// Critical fix: Properly handle disconnection with defer
-// 	defer func() {
-// 		log.Printf("Cleaning up connection for user %s", username)
-// 		conn.Close()
-// 		DeleteConnection(userID, conn)
-// 		BroadcastUserStatus()
-// 	}()
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"Error": "Error upgrading the websocket connection"})
+		log.Println("Error upgrading the connection:", err)
+		return
+	}
 
-// 	// Set read deadline and handle messages
-	
-// }
+	connection := &g.Connection{
+		Conn:     conn,
+		UserID:   userID,
+		Username: userName,
+	}
 
-// // BroadcastUserStatus sends the current online users list to all connected clients
-// func BroadcastUserStatu() {
-// 	type OnlineStatusUpdate struct {
-// 		Type   string            `json:"type"`
-// 		Online map[string]string `json:"online"` // Map of userID -> username
-// 	}
+	g.ActiveConnectionsMutex.Lock()
+	connections, exist := g.ActiveConnections[userID]
+	if exist {
+		g.ActiveConnections[userID] = append(connections, connection)
+	} else {
+		g.ActiveConnections[userID] = []*g.Connection{connection}
+	}
+	g.ActiveConnectionsMutex.Unlock()
 
-// 	// Create list of online users
-// 	g.ActiveConnectionsMutex.RLock()
-// 	onlineUsers := make(map[string]string)
-// 	for userID, connections := range g.ActiveConnections {
-// 		if len(connections) > 0 {
-// 			onlineUsers[userID] = connections[0].Username
-// 		}
-// 	}
-// 	g.ActiveConnectionsMutex.RUnlock()
+	BroadcastUserStatus(userID)
 
-// 	// log.Printf("Broadcasting user status: %d users online", len(onlineUsers))
-// 	for _, username := range onlineUsers {
-// 		log.Printf("User online: %s", username)
-// 	}
+	defer func() {
+		log.Printf("Cleaning up connection for user %s", userName)
+		conn.Close()
+		DeleteConnection(userID, conn)
+		BroadcastUserStatus(userID)
+	}()
 
-// 	update := OnlineStatusUpdate{
-// 		Type:   "status_update",
-// 		Online: onlineUsers,
-// 	}
+	for {
+		conn.SetReadDeadline(time.Now().Add(180 * time.Second))
 
-// 	message, err := json.Marshal(update)
-// 	if err != nil {
-// 		log.Println("Error marshalling status update:", err)
-// 		return
-// 	}
+		var message g.ChatMessage
 
-// 	// Broadcast to all connected clients
-// 	g.ActiveConnectionsMutex.RLock()
-// 	for _, connections := range g.ActiveConnections {
-// 		for _, conn := range connections {
-// 			conn.WriteMu.Lock()
-// 			err := conn.Conn.WriteMessage(websocket.TextMessage, message)
-// 			conn.WriteMu.Unlock()
-// 			if err != nil {
-// 				log.Printf("Error sending status update to %s: %v", conn.Username, err)
-// 			}
-// 		}
-// 	}
-// 	g.ActiveConnectionsMutex.RUnlock()
-// }
+		err = conn.ReadJSON(&message)
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				log.Printf("WebSocket error for user %s: %v", userName, err)
+			} else {
+				log.Printf("WebSocket closed for user %s: %v", userName, err)
+			}
+			return
+		}
+		// log.Println(message)
+		message.SenderID = userID
+		message.SenderName = userName
+		message.Timestamp = time.Now()
+		message.Content = html.EscapeString(message.Content)
+		messageID := uuid.New().String()
 
-// // DeleteConnection removes a specific connection from the active connections map
-// func DeleteConnectionn(userID string, conn *websocket.Conn) {
-// 	g.ActiveConnectionsMutex.Lock()
-// 	defer g.ActiveConnectionsMutex.Unlock()
+		var conversationID string
+		err = g.DB.QueryRow(`
+            SELECT id FROM Conversations
+            WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
+        `, message.SenderID, message.ReceiverID, message.ReceiverID, message.SenderID).Scan(&conversationID)
+		if err != nil {
+			conversationID = uuid.New().String()
+			_, err = g.DB.Exec(`
+                INSERT INTO Conversations (id, user1_id, user2_id)
+                VALUES (?, ?, ?)
+            `, conversationID, message.SenderID, message.ReceiverID)
+			if err != nil {
+				log.Println("Error creating conversation:", err)
+				continue
+			}
+		}
 
-// 	connections, exists := g.ActiveConnections[userID]
-// 	if !exists {
-// 		return
-// 	}
+		_, err = g.DB.Exec(`
+            INSERT INTO Messages (id, conversation_id, sender_id, content)
+            VALUES (?, ?, ?, ?)
+        `, messageID, conversationID, message.SenderID, message.Content)
+		if err != nil {
+			log.Println("Error saving message:", err)
+			continue
+		}
 
-// 	// Find and remove the specific connection
-// 	foundIndex := -1
-// 	for i, c := range connections {
-// 		if c.Conn == conn {
-// 			foundIndex = i
-// 			break
-// 		}
-// 	}
+		g.ActiveConnectionsMutex.RLock()
+		senderConnections, senderExists := g.ActiveConnections[message.SenderID]
+		g.ActiveConnectionsMutex.RUnlock()
 
-// 	// If found, remove it
-// 	if foundIndex >= 0 {
-// 		// Fix: Properly remove from slice without leaving nil elements
-// 		// Use the more explicit approach to avoid bugs
-// 		newConnections := make([]*g.Connection, 0, len(connections)-1)
-// 		for i, c := range connections {
-// 			if i != foundIndex {
-// 				newConnections = append(newConnections, c)
-// 			}
-// 		}
-// 		connections = newConnections
-// 	}
+		if senderExists {
+			for _, senderConn := range senderConnections {
+				senderConn.WriteMu.Lock()
+				err = senderConn.Conn.WriteJSON(message)
+				senderConn.WriteMu.Unlock()
+				if err != nil {
+					log.Println("Error sending confirmation to sender:", err)
+				}
+			}
+		}
 
-// 	// Update the map with the modified slice or delete the entry if empty
-// 	if len(connections) == 0 {
-// 		delete(g.ActiveConnections, userID)
-// 		// log.Printf("User %s is now offline (no active connections)", userID)
-// 	} else {
-// 		g.ActiveConnections[userID] = connections
-// 		// log.Printf("User %s still has %d active connections", userID, len(connections))
-// 	}
-// }
+		g.ActiveConnectionsMutex.RLock()
+		receiverConnections, receiverExists := g.ActiveConnections[message.ReceiverID]
+		g.ActiveConnectionsMutex.RUnlock()
 
+		if receiverExists {
+			for _, receiverConn := range receiverConnections {
+				receiverConn.WriteMu.Lock()
+				err = receiverConn.Conn.WriteJSON(message)
+				receiverConn.WriteMu.Unlock()
+				if err != nil {
+					log.Println("Error sending message to receiver:", err)
+				}
+			}
+		}
+	}
+}
 
+// this function returns both online users and all users
+func GetOnlineUsers(userID string) (map[string]bool, map[string]string) {
+	var OnlineUsers = make(map[string]bool)
+	var AllUsers = make(map[string]string)
+
+	rows, err := g.DB.Query("SELECT id,username FROM users")
+	if err != nil {
+		log.Println("Error selecting users:", err)
+		return nil, nil
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id, name string
+		if err := rows.Scan(&id, &name); err != nil {
+			log.Println("Error scanning user:", err)
+			continue
+		}
+		OnlineUsers[id] = false
+		AllUsers[id] = name
+	}
+
+	g.ActiveConnectionsMutex.RLock()
+	for id := range g.ActiveConnections {
+		OnlineUsers[id] = true
+	}
+	g.ActiveConnectionsMutex.RUnlock()
+
+	return OnlineUsers, AllUsers
+}
+
+// this function broadcast all the informations to all users
+func BroadcastUserStatus(userID string) {
+	onlineUsers, allUsers := GetOnlineUsers(userID)
+	if onlineUsers == nil || allUsers == nil {
+		log.Println("Error: failed to get online/all users")
+		return
+	}
+
+	lastMessages := make(map[string]string)
+	rows, err := g.DB.Query(`
+		SELECT 
+			CASE 
+				WHEN user1_id = ? THEN user2_id 
+				ELSE user1_id 
+			END as other_user,
+			MAX(m.created_at) as last_msg_time
+		FROM Conversations c
+		JOIN Messages m ON m.conversation_id = c.id
+		WHERE user1_id = ? OR user2_id = ?
+		GROUP BY other_user
+	`, userID, userID, userID)
+	if err == nil {
+		for rows.Next() {
+			var otherUserID, lastTime string
+			rows.Scan(&otherUserID, &lastTime)
+			lastMessages[otherUserID] = lastTime
+		}
+	}
+
+	update := struct {
+		Type         string            `json:"type"`
+		OnlineUsers  map[string]bool   `json:"onlineUsers"`
+		AllUsers     map[string]string `json:"allUsers"`
+		LastMessages map[string]string `json:"lastMessages"`
+		You          string            `json:"you"`
+	}{
+		Type:         "new_connection",
+		OnlineUsers:  onlineUsers,
+		AllUsers:     allUsers,
+		LastMessages: lastMessages,
+		You:          userID,
+	}
+
+	status, err := json.Marshal(update)
+	if err != nil {
+		log.Println("Error marshaling status:", err)
+		return
+	}
+
+	g.ActiveConnectionsMutex.Lock()
+	for _, connections := range g.ActiveConnections {
+		for _, conn := range connections {
+			conn.WriteMu.Lock()
+			conn.Conn.WriteMessage(websocket.TextMessage, status)
+			conn.WriteMu.Unlock()
+		}
+	}
+	g.ActiveConnectionsMutex.Unlock()
+}
+
+// this function deletes the connections
+func DeleteConnection(userID string, conn *websocket.Conn) {
+	g.ActiveConnectionsMutex.Lock()
+	defer g.ActiveConnectionsMutex.Unlock()
+
+	connections, exist := g.ActiveConnections[userID]
+	if !exist {
+		return
+	}
+
+	index := -1
+	for i, c := range connections {
+		if c.Conn == conn {
+			index = i
+			break
+		}
+	}
+
+	if index >= 0 {
+		newConnections := make([]*g.Connection, 0, len(connections)-1)
+		for i, c := range connections {
+			if i != index {
+				newConnections = append(newConnections, c)
+			}
+		}
+		connections = newConnections
+	}
+
+	if len(connections) == 0 {
+		delete(g.ActiveConnections, userID)
+	} else {
+		g.ActiveConnections[userID] = connections
+	}
+}
+
+// Get messages between current user and the specified user
+func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		http.Error(w, "Not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	var currentUserID string
+	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", cookie.Value).Scan(&currentUserID)
+	if err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+
+	var requestBody struct {
+		UserID string `json:"user_id"`
+		Offset int    `json:"offset"`
+		Limit  int    `json:"limit"`
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if requestBody.Limit == 0 {
+		requestBody.Limit = 10
+	}
+
+	// Get conversation ID
+	var conversationID string
+	err = g.DB.QueryRow(`
+		SELECT id FROM Conversations
+		WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
+	`, currentUserID, requestBody.UserID, requestBody.UserID, currentUserID).Scan(&conversationID)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Error fetching the conversation"})
+		return
+	}
+
+	// Get messages
+	rows, err := g.DB.Query(`
+		SELECT m.id, m.sender_id, u.username, m.content, m.sent_at
+		FROM Messages m
+		JOIN users u ON m.sender_id = u.id
+		WHERE m.conversation_id = ?
+		ORDER BY m.sent_at DESC
+		LIMIT ? OFFSET ?
+	`, conversationID, requestBody.Limit, requestBody.Offset)
+	if err != nil {
+		log.Println("Error getting messages:", err)
+		http.Error(w, "Error getting messages", http.StatusInternalServerError)
+		return
+	}
+
+	var messages []g.Message
+
+	for rows.Next() {
+		var message g.Message
+		err := rows.Scan(&message.ID, &message.SenderID, &message.Username, &message.Content, &message.Timestamp)
+		if err != nil {
+			log.Println("Error scanning message:", err)
+			rows.Close()
+			http.Error(w, "Error reading messages", http.StatusInternalServerError)
+			return
+		}
+		messages = append(messages, message)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println("Row iteration error:", err)
+		rows.Close()
+		http.Error(w, "Error reading message list", http.StatusInternalServerError)
+		return
+	}
+
+	rows.Close()
+
+	// Reverse for chronological order
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(messages)
+}

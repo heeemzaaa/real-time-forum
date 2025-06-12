@@ -45,10 +45,8 @@ func main() {
 	http.HandleFunc("/api/add-comment", h.HandleAddComment)
 
 	// New Chat API endpoints
-	http.HandleFunc("/api/ws", h.MyHandleWebSocket)
+	http.HandleFunc("/api/ws", h.HandleWebSocket)
 	http.HandleFunc("/api/get-messages", h.HandleGetMessages)
-	// http.HandleFunc("/api/ws", h.HandleWebSocket)
-	// http.HandleFunc("/api/get-online-users", h.HandleGetOnlineUsers)
 
 	// Catch-all: Serve index.html for all frontend routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

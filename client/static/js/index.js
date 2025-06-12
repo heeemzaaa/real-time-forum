@@ -16,10 +16,9 @@ function initializePage() {
   });
   navbar.style.display = 'none';
 
-  // Add event listeners for navigation
-  toHomeButton.addEventListener('click', () => showPage('home-page'));
-  toPostButton.addEventListener('click', () => showPage('add-post-page'));
-
+  toPostButton.addEventListener('click' , () => {
+      showPage('add-post-page')
+  })
 }
 
 // Session check on page load
@@ -53,12 +52,9 @@ function showPage(pageId) {
 
   navbar.style.display = (pageId === 'register-login-page') ? 'none' : 'flex';
 
-  iconesNav.style.display = (pageId === 'register-login-page') ? 'none' : 'flex';
-
   if (pageId === 'home-page') {
-    // loadOnlineUsers();
     connectWebSocket()
-    loadPosts(); // Load all posts
+    loadPosts()
   } else if (pageId === 'add-post-page') {
     loadCategories();
   }

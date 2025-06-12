@@ -99,9 +99,7 @@ body {
 /* Home Page Styling - SIMPLE SINGLE POST APPROACH */
 .content-wrapper {
     width: 90%;
-    /* Increased from 100% */
     max-width: 1400px;
-    /* Increased from 1200px */
     margin: 0 auto;
     padding: 0 20px;
     box-sizing: border-box;
@@ -110,12 +108,13 @@ body {
 #home-page {
     justify-content: center;
     align-items: center;
-    /* padding-top: 10px; */
-    padding-bottom: 30px;
+    margin-bottom: 100px;
     width: 100%;
-    margin: 0 auto;
-    /* max-width: 100%; */
-    /* Increased from 800px */
+}
+
+#postsContainer {
+    margin-bottom: 70px;
+    margin-top: 130px;
 }
 
 /* Post Card Styling */
@@ -129,8 +128,8 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 180px;
-    margin-bottom: 30px;
-    margin-top: 3rem;
+    margin-bottom: 50px;
+    margin-top: 50px;
     box-sizing: border-box;
     transition: transform 0.2s, box-shadow 0.2s;
     width: 100%;
@@ -550,77 +549,6 @@ h1 {
     font-size: 32px;
 }
 
-.categories-filter {
-    display: flex;
-    flex-wrap: nowrap;
-    /* Prevent wrapping to new lines */
-    gap: 10px;
-    margin: 20px;
-    overflow-x: auto;
-    /* Enable horizontal scrolling if needed */
-    padding: 5px 0;
-    /* Add some padding for better appearance */
-    /* justify-content: center; */
-    /* Align items to the start of the container */
-    -webkit-overflow-scrolling: touch;
-    /* Smooth scrolling on iOS */
-    scrollbar-width: thin;
-    /* Thin scrollbar for Firefox */
-}
-
-/* Hide scrollbar for Chrome, Safari and Opera */
-.categories-filter::-webkit-scrollbar {
-    height: 5px;
-}
-
-/* Add scrollbar styling for better visibility */
-.categories-filter::-webkit-scrollbar-thumb {
-    background: #095aa5;
-    border-radius: 5px;
-}
-
-/* Make buttons more compact to fit more on a line */
-.category-button {
-    background-color: white;
-    color: #095aa5;
-    border: 2px solid #095aa5;
-    border-radius: 20px;
-    padding: 6px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    /* Prevent button text from wrapping */
-    flex-shrink: 0;
-    /* Prevent buttons from shrinking */
-    display: inline-block;
-    /* Better control over sizing */
-    min-width: 0;
-    /* Allow buttons to be as small as their content */
-    margin: 0 2px;
-    /* Small margin between buttons */
-}
-
-.category-button:hover {
-    background-color: #f0f0ff;
-}
-
-.category-button.active {
-    background-color: #095aa5;
-    color: white;
-}
-
-#icones-nav {
-    display: flex;
-    margin: 100px 100px 0;
-    justify-content: center;
-    align-items: center;
-    border: 2px solid #a5a5a5;
-    border-radius: 12px;
-    padding: 10px 10px;
-    width: 70%;
-}
 
 i {
     font-size: 26px;
@@ -655,20 +583,27 @@ i {
     }
 }
 
-#to-home,
-#to-post,
-#to-messages {
+#to-post {
     margin: 0 10px;
     cursor: pointer;
     transition: 0.5s;
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    background-color: #095aa5;
+    border-radius: 35px;
+    z-index: 1000;
+    margin-bottom: 40px;
+    margin-right: 40px;
+    padding: 10px;
 }
 
-#to-home:hover,
-#to-post:hover,
-#to-messages:hover {
-    background-color: transparent;
-    border-radius: 8px;
-    transform: scale(1.2);
+#to-post:hover {
+    background-color: white;
+    border: 2px solid #095aa5;
+    border-radius: 35px;
+    color: #095aa5;
+    transform: scale(1.1);
 }
 
 #logout {
@@ -816,25 +751,32 @@ i {
     gap: 10px;
 }
 
+/* Space between all messages */
 .message-item {
-    max-width: 70%;
+    margin: 8px 0; /* vertical spacing */
+    max-width: 75%;
+    min-width: 50%;
     padding: 10px 15px;
     border-radius: 18px;
-    position: relative;
     word-wrap: break-word;
+    display: inline-block;
 }
 
+/* Sender message: right-aligned, blue background, white text */
 .message-item.sent {
     align-self: flex-end;
     background-color: #095aa5;
     color: white;
+    font-weight: bold;
     border-bottom-right-radius: 5px;
 }
 
+/* Receiver message: left-aligned, light background, blue text */
 .message-item.received {
     align-self: flex-start;
     background-color: #f0f0f0;
-    color: #333;
+    color: #095aa5;
+    font-weight: bold;
     border-bottom-left-radius: 5px;
 }
 
@@ -871,20 +813,6 @@ i {
     box-sizing: border-box;
 }
 
-.send-icon {
-    position: absolute;
-    right: 15px;
-    font-size: 22px;
-    color: #095aa5;
-    cursor: pointer;
-    transition: color 0.2s, transform 0.2s;
-}
-
-.send-icon:hover {
-    color: #564bd1;
-    transform: scale(1.1);
-}
-
 #sendMessageForm {
     display: flex;
     width: 100%;
@@ -915,9 +843,11 @@ i {
     background-color: #f8f9fa;
     border-left: 1px solid #dee2e6;
     padding: 15px;
-    margin-top: 3rem;
+    margin-top: 130px;
+    margin-bottom:70px;
     border-radius: 8px;
     border: 2px solid #095aa5;
+    overflow-y: auto;
 }
 
 #homePageSidebar h2 {
@@ -973,7 +903,7 @@ i {
     bottom: 20px;
     right: 20px;
     width: 350px;
-    min-height: 500px;
+    height: 500px;
     background: white;
     border: 2px solid #095aa5;
     border-radius: 8px;
@@ -996,12 +926,14 @@ i {
 }
 
 .chat-popup-body {
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px; 
     padding: 10px;
-    height: 200px;
     overflow-y: auto;
-    border-top: 1px solid #ccc;
+    height: 350px; 
 }
+
 
 .chat-popup-footer {
     position: relative;
@@ -1016,6 +948,9 @@ i {
     width: 90%;
     height: 20px;
     padding-right: 10px;
+    padding-left: 10px;
+    padding-top: 10px;
+    padding-bottom: 10px;
     resize: none;
     border-radius: 5px;
     border: 1px solid #aaa;
@@ -1025,6 +960,7 @@ i {
 .send-popup-icon {
     position: absolute;
     right: 20px;
+  
     bottom: 22px;
     font-size: 18px;
     color: #095aa5;
