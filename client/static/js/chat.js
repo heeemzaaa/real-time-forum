@@ -23,10 +23,26 @@ function connectWebSocket() {
                 let onlineUsers = data.onlineUsers
                 let allUsers = data.allUsers
                 let lastMessages = data.lastMessages || {}
-                let lastMessageSeen = data.lastMessageSeen || {}
-                currentChatUserId = data.you
-                console.log(lastMessageSeen)
-                loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen)
+
+
+                fetch('/api/check-session', {
+                    credentials: 'include',
+                })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.message === "ok") {
+                            currentChatUserId = result.userID
+                            loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen)            
+                        } else if (result.message === "Error in the cookie" || result.message === "try to login again") {
+                            const existingPopup = document.querySelector('.chat-popup')
+                            if (existingPopup) {
+                                existingPopup.remove()
+                            }
+                            showPage('register-login-page')
+                        }
+                    }).catch(() => {
+                        showPage('register-login-page');
+                    }); let lastMessageSeen = data.lastMessageSeen || {}
                 return
             }
 
