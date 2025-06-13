@@ -1,8 +1,18 @@
 const userList = document.getElementById('homePageUsersList')
 let currentChatUserId = ""
 let socket = null
+let isOpen = false
+let cantConnect = false
 
 function connectWebSocket() {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log("✅ WebSocket already connected, skipping.")
+        return
+    }
+
+    if (cantConnect) return
+    cantConnect = true
+
     socket = new WebSocket("ws://localhost:8080/api/ws")
 
     socket.onmessage = (event) => {
@@ -13,27 +23,28 @@ function connectWebSocket() {
                 let onlineUsers = data.onlineUsers
                 let allUsers = data.allUsers
                 let lastMessages = data.lastMessages || {}
-                console.log(lastMessages)
-                fetch('/api/check-session', {
-                    credentials: 'include',
-                })
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.message === "ok") {
-                            currentChatUserId = result.userID
-                            loadUsers(allUsers, onlineUsers, result.userID, lastMessages)
-                        } else if (result.message === "Error in the cookie" || result.message === "try to login again") {
-                            showPage('register-login-page')
-                        }
-                    }).catch((e) => {
-                        console.error(e)
-                    });
+                let lastMessageSeen = data.lastMessageSeen || {}
+                currentChatUserId = data.you
+                console.log(lastMessageSeen)
+                loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen)
                 return
             }
 
             if (data.sender_id && data.receiver_id && data.content) {
-                // console.log(data)
                 appendMessageToPopup(data)
+
+                const isForMe = data.receiver_id === currentChatUserId
+                const popupOpen = document.getElementById(`chat-popup-${data.sender_id}`)
+
+                if (isForMe && popupOpen) {
+                    const seenUpdate = {
+                        type: "seen-update",
+                        sender_id: data.sender_id,
+                        receiver_id: currentChatUserId,
+                        seen: true
+                    }
+                    socket.send(JSON.stringify(seenUpdate))
+                }
             }
 
         } catch (e) {
@@ -53,16 +64,23 @@ function connectWebSocket() {
 
     })
 
+    socket.onopen = () => {
+        console.log("WebSocket connected.")
+        cantConnect = false
+    }
+
     socket.onclose = (event) => {
         console.log('WebSocket connection closed:', event)
+        cantConnect
     }
 
     socket.onerror = (error) => {
         console.error('WebSocket error:', error)
+        cantConnect = false
     }
 }
 
-function loadUsers(users, onlineUsers, currentUserId, lastMessages) {
+function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageSeen) {
     userList.innerHTML = ''
 
     let userEntries = Object.entries(users).filter(([id]) => id !== currentUserId)
@@ -70,9 +88,6 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages) {
     userEntries.sort((a, b) => {
         let aTime = lastMessages[a[0]] || ""
         let bTime = lastMessages[b[0]] || ""
-
-        console.log("atime: ", aTime)
-        console.log("btime: ", bTime)
 
         if (aTime && bTime) {
             return new Date(bTime) - new Date(aTime)
@@ -89,11 +104,11 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages) {
         let userStatus = document.createElement('div')
         userStatus.classList.add('user-item')
         userStatus.setAttribute('data-user-id', userID)
-
         userStatus.classList.add(onlineUsers[userID] ? 'online' : 'offline')
         userStatus.innerHTML = `
-            <div class="user-status ${onlineUsers[userID] ? 'online-indicator' : 'offline-indicator'}"></div>
-            <div class="user-name">${username}</div>
+        <div class="user-status ${onlineUsers[userID] ? 'online-indicator' : 'offline-indicator'}"></div>
+        <div class="user-name">${username}</div>
+        <div class="messages">${(lastMessageSeen[userID] == false) ? '<i class="fa-solid fa-message" id="newMessage"></i>' : ''}
         `
         userList.appendChild(userStatus)
     }
@@ -131,21 +146,33 @@ function openChatPopup(userId, username) {
 
     popup.querySelector('.close-chat').addEventListener('click', () => popup.remove())
 
+    const seenUpdate = {
+        type: "seen-update",
+        sender_id: userId,
+        receiver_id: currentChatUserId,
+        seen: true
+    }
+    socket.send(JSON.stringify(seenUpdate))
+
+
     popup.querySelector('.send-popup-icon').addEventListener('click', () => {
         const textarea = popup.querySelector('textarea')
         const content = textarea.value.trim()
         if (!content || !socket || socket.readyState !== WebSocket.OPEN) return
 
         const messageObj = {
+            type: "new-message",
             content: content,
             receiver_id: userId,
             sender_id: currentChatUserId,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            seen: false
         }
 
         socket.send(JSON.stringify(messageObj))
         textarea.value = ""
     })
+
     popup.querySelector('.chat-popup-body').dataset.offset = '10'
     loadMessages(userId, popup.querySelector('.chat-popup-body'), 0, 10)
     const chatBody = popup.querySelector('.chat-popup-body')
@@ -153,7 +180,7 @@ function openChatPopup(userId, username) {
         if (chatBody.scrollTop === 0) {
             loadMoreMessages(userId, chatBody)
         }
-    }, 300)) // adjust delay as needed
+    }, 300))
 
 }
 
@@ -220,8 +247,6 @@ function loadMoreMessages(userId, container) {
 
 
 function loadMessages(userId, container, offset = 0, limit = 10) {
-    console.log("ofsset:", offset)
-    console.log("limit:", limit)
 
     fetch('/api/get-messages', {
         method: 'POST',

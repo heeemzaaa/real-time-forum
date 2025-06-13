@@ -35,9 +35,9 @@ function checkSession() {
     .then(result => {
       if (result.message === "ok") {
         showPage('home-page');
-      } else {
-        showPage('register-login-page');
-      }
+      } else if (result.message === "Error in the cookie" || result.message === "try to login again") {
+        showPage('register-login-page')
+    }
     }).catch(() => {
       showPage('register-login-page');
     });

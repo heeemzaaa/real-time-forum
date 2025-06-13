@@ -65,8 +65,10 @@ CREATE TABLE IF NOT EXISTS Messages (
     id TEXT UNIQUE PRIMARY KEY,
     conversation_id TEXT NOT NULL,
     sender_id TEXT NOT NULL,
+    receiver_id TEXT NOT NULL,
     content TEXT NOT NULL,
     sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    seen BOOLEAN,
     FOREIGN KEY (conversation_id) REFERENCES Conversations(id),
     FOREIGN KEY (sender_id) REFERENCES Users(id)
 );

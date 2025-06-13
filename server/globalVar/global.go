@@ -58,10 +58,12 @@ type Connection struct {
 }
 
 type ChatMessage struct {
+	Type       string    `json:"type"`
 	SenderID   string    `json:"sender_id"`
 	SenderName string    `json:"sender_name"`
 	ReceiverID string    `json:"receiver_id"`
 	Content    string    `json:"content"`
+	Seen       bool      `json:"seen"`
 	Timestamp  time.Time `json:"timestamp"`
 }
 

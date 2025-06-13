@@ -74,6 +74,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		DeleteConnection(userID, conn)
 		BroadcastUserStatus(userID)
 	}()
+	log.Println("🧩 New WebSocket connection for user:", userID)
 
 	for {
 		conn.SetReadDeadline(time.Now().Add(180 * time.Second))
@@ -89,6 +90,15 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
+		if message.Type == "seen-update" {
+			_, err = g.DB.Exec(`UPDATE Messages SET seen = 1 WHERE sender_id = ? AND receiver_id = ? AND seen = 0`, message.SenderID, message.ReceiverID)
+			if err != nil {
+				log.Println("Failed to update seen messages:", err)
+			}
+			BroadcastUserStatus(userID)
+			continue
+		}
+
 		message.SenderID = userID
 		message.SenderName = userName
 		message.Timestamp = time.Now()
@@ -113,9 +123,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err = g.DB.Exec(`
-            INSERT INTO Messages (id, conversation_id, sender_id, content)
-            VALUES (?, ?, ?, ?)
-        `, messageID, conversationID, message.SenderID, message.Content)
+            INSERT INTO Messages (id, conversation_id, sender_id, receiver_id, content, seen)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, messageID, conversationID, message.SenderID, message.ReceiverID, message.Content, message.Seen)
 		if err != nil {
 			log.Println("Error saving message:", err)
 			continue
@@ -223,17 +233,43 @@ func BroadcastUserStatus(triggerUserID string) {
 		}
 		rows.Close()
 
-		// Send personalized update to each user's active connections
+		lastMessageSeen := make(map[string]bool)
+
+		for otherUserID := range lastMessages {
+			var lastMessage string
+			var senderID string
+			var seen bool
+
+			err := g.DB.QueryRow(`
+				SELECT id, sender_id, seen FROM Messages
+				WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+				ORDER BY sent_at DESC
+				LIMIT 1
+				`, userID, otherUserID, otherUserID, userID).Scan(&lastMessage, &senderID, &seen)
+
+			if err != nil {
+				log.Println("Error querying last message between", userID, "and", otherUserID, ":", err)
+				continue
+			}
+			if senderID != userID {
+				lastMessageSeen[senderID] = seen
+			}
+		}
+
 		update := struct {
 			Type         string            `json:"type"`
 			OnlineUsers  map[string]bool   `json:"onlineUsers"`
 			AllUsers     map[string]string `json:"allUsers"`
 			LastMessages map[string]string `json:"lastMessages"`
+			LastMessage  map[string]bool   `json:"lastMessageSeen"`
+			You          string            `json:"you"`
 		}{
 			Type:         "new_connection",
 			OnlineUsers:  onlineUsers,
 			AllUsers:     allUsers,
 			LastMessages: lastMessages,
+			LastMessage:  lastMessageSeen,
+			You:          userID,
 		}
 
 		status, err := json.Marshal(update)
