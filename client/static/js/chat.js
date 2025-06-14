@@ -2,7 +2,7 @@ const userList = document.getElementById('homePageUsersList')
 let currentChatUserId = ""
 let socket = null
 let isOpen = false
-let cantConnect = false
+let denyConnection = false
 
 function connectWebSocket() {
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -10,8 +10,8 @@ function connectWebSocket() {
         return
     }
 
-    if (cantConnect) return
-    cantConnect = true
+    if (denyConnection) return
+    denyConnection = true
 
     socket = new WebSocket("ws://localhost:8080/api/ws")
 
@@ -32,7 +32,7 @@ function connectWebSocket() {
                     .then(result => {
                         if (result.message === "ok") {
                             currentChatUserId = result.userID
-                            loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen)            
+                            loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen)
                         } else if (result.message === "Error in the cookie" || result.message === "try to login again") {
                             const existingPopup = document.querySelector('.chat-popup')
                             if (existingPopup) {
@@ -82,17 +82,17 @@ function connectWebSocket() {
 
     socket.onopen = () => {
         console.log("WebSocket connected.")
-        cantConnect = false
+        denyConnection = false
     }
 
     socket.onclose = (event) => {
         console.log('WebSocket connection closed:', event)
-        cantConnect
+        denyConnection
     }
 
     socket.onerror = (error) => {
         console.error('WebSocket error:', error)
-        cantConnect = false
+        denyConnection = false
     }
 }
 
@@ -222,47 +222,56 @@ function loadMoreMessages(userId, container) {
         })
     })
         .then(res => res.json())
-        .then(messages => {
-            const scrollHeightBefore = container.scrollHeight
-            const oldScrollTop = container.scrollTop
+        .then(data => {
+            if (data.status === 401) {
+                showPage('register-login-page')
+            } else if (data.status === 400) {
+                Toast(data.message || 'Invalid request')
+            } else if (data.status === 500) {
+                errorPage(data.status, data.message || 'Server error while loading messages.')
+                showPage('ErrorPage')
+            } else if (Array.isArray(data)) {
+                const scrollHeightBefore = container.scrollHeight
+                const oldScrollTop = container.scrollTop
 
-            messages.reverse().forEach(msg => {
-                const firstChild = container.firstChild
-                const div = document.createElement('div')
-                const isSender = msg.sender_id === currentChatUserId
-                div.classList.add('message-item')
-                div.classList.add(isSender ? 'sent' : 'received')
+                data.reverse().forEach(msg => {
+                    const firstChild = container.firstChild
+                    const div = document.createElement('div')
+                    const isSender = msg.sender_id === currentChatUserId
+                    div.classList.add('message-item', isSender ? 'sent' : 'received')
 
-                const timestamp = new Date(msg.timestamp || Date.now()).toLocaleTimeString('fr-FR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                })
+                    const timestamp = new Date(msg.timestamp || Date.now()).toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    })
 
-                div.innerHTML = `
+                    div.innerHTML = `
                     <div class="message-content">${msg.content}</div>
                     <div class="message-meta">
                         <span>by: ${msg.username}</span>
                         <span>${timestamp}</span>
                     </div>
                 `
-                container.insertBefore(div, firstChild)
-            })
+                    container.insertBefore(div, firstChild)
+                })
 
-            // Update scroll so user doesn't jump
-            const newHeight = container.scrollHeight
-            container.scrollTop = newHeight - scrollHeightBefore + oldScrollTop
-
-            // Update offset for next load
-            container.dataset.offset = offset + 10
+                const newHeight = container.scrollHeight
+                container.scrollTop = newHeight - scrollHeightBefore + oldScrollTop
+                container.dataset.offset = offset + 10
+            } else {
+                Toast('Unexpected error loading more messages.')
+            }
         })
         .catch(err => {
             console.error("Error loading more messages:", err)
+            errorPage(500, 'Failed to load more messages. Try again later.')
+            showPage('ErrorPage')
         })
 }
 
-
-function loadMessages(userId, container, offset = 0, limit = 10) {
+function loadMoreMessages(userId, container) {
+    let offset = parseInt(container.dataset.offset || '0')
 
     fetch('/api/get-messages', {
         method: 'POST',
@@ -271,16 +280,55 @@ function loadMessages(userId, container, offset = 0, limit = 10) {
         body: JSON.stringify({
             user_id: userId,
             offset: offset,
-            limit: limit
+            limit: 10
         })
     })
         .then(res => res.json())
-        .then(messages => {
-            messages.forEach(msg => appendMessagesFromLoading(container, msg))
-            container.scrollTop = container.scrollHeight
+        .then(data => {
+            if (data.status === 401) {
+                showPage('register-login-page')
+            } else if (data.status === 400) {
+                Toast(data.message || 'Invalid request')
+            } else if (data.status === 500) {
+                errorPage(data.status, data.message || 'Server error while loading messages.')
+                showPage('ErrorPage')
+            } else if (Array.isArray(data)) {
+                const scrollHeightBefore = container.scrollHeight
+                const oldScrollTop = container.scrollTop
+
+                data.reverse().forEach(msg => {
+                    const firstChild = container.firstChild
+                    const div = document.createElement('div')
+                    const isSender = msg.sender_id === currentChatUserId
+                    div.classList.add('message-item', isSender ? 'sent' : 'received')
+
+                    const timestamp = new Date(msg.timestamp || Date.now()).toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    })
+
+                    div.innerHTML = `
+                    <div class="message-content">${msg.content}</div>
+                    <div class="message-meta">
+                        <span>by: ${msg.username}</span>
+                        <span>${timestamp}</span>
+                    </div>
+                `
+                    container.insertBefore(div, firstChild)
+                })
+
+                const newHeight = container.scrollHeight
+                container.scrollTop = newHeight - scrollHeightBefore + oldScrollTop
+                container.dataset.offset = offset + 10
+            } else {
+                Toast('Unexpected error loading more messages.')
+            }
         })
         .catch(err => {
-            console.error('Error fetching messages:', err)
+            console.error("Error loading more messages:", err)
+            errorPage(500, 'Failed to load more messages. Try again later.')
+            showPage('ErrorPage')
         })
 }
 
