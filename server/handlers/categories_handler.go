@@ -11,8 +11,8 @@ func HandleCategories(w http.ResponseWriter, r *http.Request) {
 	rows, err := g.DB.Query("SELECT category_name FROM categories")
 	if err != nil {
 		log.Println("Failed to retrieve categories:", err)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to retrieve categories"})
 		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Failed to retrieve categories"})
 		return
 	}
 	defer rows.Close()
@@ -21,8 +21,8 @@ func HandleCategories(w http.ResponseWriter, r *http.Request) {
 		var categories g.Categories
 		err = rows.Scan(&categories.CategoryName)
 		if err != nil {
-			json.NewEncoder(w).Encode(map[string]string{"message": "Failed to scan categories"})
 			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Failed to scan categories"})
 			return
 		}
 		g.SliceOfCategories = append(g.SliceOfCategories, categories)

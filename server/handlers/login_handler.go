@@ -10,15 +10,11 @@ import (
 )
 // this function handles all the logic of the login
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	
 	w.Header().Set("Content-Type", "application/json")
 	
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusMethodNotAllowed, "message": "Method not allowed !"})
 		return
 	}
 	
@@ -33,8 +29,8 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&checker)
 	if err != nil {
 		log.Println("Error in database:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest, "message": "Invalid request format"})
 		return
 	}
 
@@ -43,29 +39,30 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error in database:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error in the server, please try again !"})
 		return
 	}
 
 	if exist == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Username or Email not found !"})
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "Username or Email not found !"})
 		return
 	}
+
 	hashedPassword := ""
 	err = g.DB.QueryRow("SELECT password_hash FROM users WHERE username = ? OR email = ?", checker.UsernameOrEmail, checker.UsernameOrEmail).Scan(&hashedPassword)
 	if err != nil {
 		log.Println("Error in database:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error in the server, please try again !"})
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(checker.Password))
 	if err != nil {
 		log.Println("Error in the hashing:", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Password not correct!"})
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "Password not correct!"})
 		return
 	}
 
@@ -75,7 +72,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error in database:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error in the server, please try again !"})
 		return
 	}
 
@@ -83,11 +80,11 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Failed to create session:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error in the server, please try again !"})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Login successful!" , "username": username})
+	json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "Login successful!" , "username": username})
 
 }

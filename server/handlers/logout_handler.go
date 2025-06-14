@@ -15,8 +15,8 @@ func HandleLogout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		log.Println("Failed to get cookie:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to get the session Id!"})
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "Failed to get the session Id!"})
 		return
 	}
 
@@ -24,7 +24,7 @@ func HandleLogout(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Failed to delete session:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to delete the session Id from the database!"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Failed to delete the session Id from the database!"})
 		return
 	}
 
@@ -39,5 +39,5 @@ func HandleLogout(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Session deleted successfully!"})
+	json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "Session deleted successfully!"})
 }

@@ -64,8 +64,8 @@ func CheckSession(w http.ResponseWriter, r *http.Request) {
 
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the cookie"})
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "there is no cookie"})
 		return
 	}
 
@@ -75,9 +75,9 @@ func CheckSession(w http.ResponseWriter, r *http.Request) {
 	if err != nil || time.Now().After(expiration) {
 		log.Println("Error:" , err)
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"message": "try to login again"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized ,"message": "try to login again"})
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "ok", "userID": userID})
+	json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "ok", "userID": userID})
 }

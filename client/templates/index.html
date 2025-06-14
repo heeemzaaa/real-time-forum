@@ -16,7 +16,6 @@
     <nav id="navbar" style="display: none;">
         <div class="logo" onclick="showPage('home-page')">RTF.01</div>
         <div class="user-menu">
-            <div id="usernameDisplay" class="hidden"></div>
             <div id="to-post">
                 <i class="fa-solid fa-plus" id="toPost"></i><span id="span-icone">New Post</span>
             </div>
@@ -98,7 +97,7 @@
             <input type="text" id="custom" placeholder="Add a custom category">
             <button id="addCategory">Add Category</button>
             <select id="categories">
-
+                <option value="" selected disabled style="color: gray;">Choose category or more</option>
             </select>
             <p id="categoryError" class="hidden">Can't add this category because it's already there</p>
             <textarea type="text" id="content" placeholder="content" required></textarea>
@@ -132,9 +131,15 @@
         </div>
     </section>
 
+    <section id="ErrorPage" style="display:none;">
+        
+    </section>
+
+    <script src="static/js/error.js"></script>
     <script src="/static/js/index.js"></script>
     <script src="/static/js/chat.js"></script>
     <script src="/static/js/toast.js"></script>
+    <script src="static/js/single_post.js"></script>
 </body>
 
 </html>

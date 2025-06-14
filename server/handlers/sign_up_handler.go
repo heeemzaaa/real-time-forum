@@ -13,16 +13,11 @@ import (
 
 // this function handles all the logic of the new users who wants to sign up
 func HandleSignUp(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusMethodNotAllowed, "message": "Method not allowed !"})
 		return
 	}
 
@@ -30,35 +25,36 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		log.Println("Error sending the json:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest, "message": "Invalid request format"})
 		return
 	}
-	if user.Username == "" || user.Email == "" || user.PasswordHash == "" || user.FirstName == "" || user.LastName == "" {
-		json.NewEncoder(w).Encode(map[string]string{"message": "Please fill in all required fields"})
+	if user.Username == "" || user.Email == "" || user.PasswordHash == "" || user.FirstName == "" || user.LastName == "" || user.Gender == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest , "message": "Please fill in all required fields"})
 		return
 	}
 
 	exist := 0
 	err = g.DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ? OR email = ?", user.Username, user.Email).Scan(&exist)
 	if err != nil {
-		log.Println("Error in the database:" , err)
+		log.Println("Error in the database:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error in the server, please try again !"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error in the server, please try again !"})
 		return
 	}
 
 	if exist > 0 {
 		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Email or username already used!"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusConflict, "message": "Email or username already used!"})
 		return
 	}
 	var userId string
 	userId, err = RegisterClient(user)
 	if err != nil {
-		log.Println("error in the server:" , err)
+		log.Println("error in the server:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error registring the client!"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error registring the client!"})
 		return
 	}
 
@@ -66,18 +62,20 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Failed to create session:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to create session !"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Failed to create session !"})
 	}
+	
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User created"})
+	json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "User created"})
 }
+
 
 // this function insert a new client into the database
 func RegisterClient(user g.User) (string, error) {
 	id := uuid.New().String()
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.PasswordHash), 12)
 	if err != nil {
-		log.Println("Error in generating the password:" ,err)
+		log.Println("Error in generating the password:", err)
 		return "", fmt.Errorf("hash error: %v", err)
 	}
 

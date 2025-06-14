@@ -12,10 +12,10 @@ import (
 func HandleGetComments(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusMethodNotAllowed, "message": "Method not allowed !"})
 		return
 	}
 
-	// Parse the request body to get the post ID
 	var requestBody struct {
 		PostID string `json:"post_id"`
 	}
@@ -24,7 +24,7 @@ func HandleGetComments(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid request format"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest, "message": "Invalid request format"})
 		return
 	}
 
@@ -78,10 +78,10 @@ func HandleGetComments(w http.ResponseWriter, r *http.Request) {
 func HandleAddComment(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusMethodNotAllowed, "message": "Method not allowed !"})
 		return
 	}
 
-	// Parse the comment data from the request
 	var commentData struct {
 		PostID  string `json:"post_id"`
 		Content string `json:"content"`
@@ -91,24 +91,22 @@ func HandleAddComment(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error parsing comment data"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest, "message": "Invalid request format"})
 		return
 	}
 
-	// Validate the data
 	if commentData.PostID == "" || commentData.Content == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Post ID and content are required"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest, "message": "Post ID and content are required"})
 		return
 	}
 
-	// Get the user ID from the session
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"message": "You must be logged in to comment"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in to comment"})
 		return
 	}
 
@@ -117,7 +115,7 @@ func HandleAddComment(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid session"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "Invalid session"})
 		return
 	}
 
@@ -126,15 +124,14 @@ func HandleAddComment(w http.ResponseWriter, r *http.Request) {
 	_, err = g.DB.Exec(
 		"INSERT INTO comments (id, post_id, user_id, content) VALUES (?, ?, ?, ?)",
 		commentID, commentData.PostID, userID, commentData.Content)
-
 	if err != nil {
 		log.Println("Error creating comment:", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to create comment"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Failed to create comment"})
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Comment added successfully", "id": commentID})
+	json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "Comment added successfully", "id": commentID})
 }

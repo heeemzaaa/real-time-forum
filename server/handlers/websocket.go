@@ -27,8 +27,8 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"Error": "Error in the session !"})
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "Error": "Please login !"})
 		log.Println("Error in the session:", err)
 		return
 	}
@@ -38,7 +38,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	err = g.DB.QueryRow("SELECT user_id,username FROM session WHERE id = ?", cookie.Value).Scan(&userID, &userName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"Error": "Error in the server"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "Error": "Error in the server"})
 		log.Println("Error fetching the userId and username from the database:", err)
 		return
 	}
@@ -46,7 +46,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"Error": "Error upgrading the websocket connection"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "Error": "Error upgrading the websocket connection"})
 		log.Println("Error upgrading the connection:", err)
 		return
 	}
@@ -74,7 +74,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		DeleteConnection(userID, conn)
 		BroadcastUserStatus(userID)
 	}()
-	log.Println("🧩 New WebSocket connection for user:", userID)
 
 	for {
 		conn.SetReadDeadline(time.Now().Add(180 * time.Second))
@@ -196,8 +195,8 @@ func GetOnlineUsers(userID string) (map[string]bool, map[string]string) {
 }
 
 // this function broadcast all the informations to all users
-func BroadcastUserStatus(triggerUserID string) {
-	onlineUsers, allUsers := GetOnlineUsers(triggerUserID)
+func BroadcastUserStatus(initiatorID string) {
+	onlineUsers, allUsers := GetOnlineUsers(initiatorID)
 	if onlineUsers == nil || allUsers == nil {
 		log.Println("Error: failed to get online/all users")
 		return
@@ -326,21 +325,26 @@ func DeleteConnection(userID string, conn *websocket.Conn) {
 
 // Get messages between current user and the specified user
 func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusMethodNotAllowed, "message": "Method not allowed !"})
 		return
 	}
 
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
-		http.Error(w, "Not authenticated", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You have to login to see messages"})
 		return
 	}
 
 	var currentUserID string
 	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", cookie.Value).Scan(&currentUserID)
 	if err != nil {
-		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You have to login to see messages"})
 		return
 	}
 
@@ -352,7 +356,8 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest, "message": "Invalid request format"})
 		return
 	}
 
@@ -360,7 +365,6 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 		requestBody.Limit = 10
 	}
 
-	// Get conversation ID
 	var conversationID string
 	err = g.DB.QueryRow(`
 		SELECT id FROM Conversations
@@ -369,11 +373,10 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Error fetching the conversation"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error fetching the conversation"})
 		return
 	}
 
-	// Get messages
 	rows, err := g.DB.Query(`
 		SELECT m.id, m.sender_id, u.username, m.content, m.sent_at
 		FROM Messages m
@@ -384,7 +387,8 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	`, conversationID, requestBody.Limit, requestBody.Offset)
 	if err != nil {
 		log.Println("Error getting messages:", err)
-		http.Error(w, "Error getting messages", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error fetching the messages"})
 		return
 	}
 
@@ -396,26 +400,27 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println("Error scanning message:", err)
 			rows.Close()
-			http.Error(w, "Error reading messages", http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error scanning the messages"})
 			return
 		}
 		messages = append(messages, message)
 	}
 
-	if err := rows.Err(); err != nil {
+	err = rows.Err()
+	if err != nil {
 		log.Println("Row iteration error:", err)
 		rows.Close()
-		http.Error(w, "Error reading message list", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error scanning the messages"})
 		return
 	}
 
 	rows.Close()
 
-	// Reverse for chronological order
 	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
 		messages[i], messages[j] = messages[j], messages[i]
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(messages)
 }
