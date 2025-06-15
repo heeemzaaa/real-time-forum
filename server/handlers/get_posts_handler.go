@@ -10,10 +10,16 @@ import (
 // this function handles the logic of all posts in the home page
 func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusMethodNotAllowed, "message": "Method not allowed !"})
+		return
+	}
+
+	_, err := GetSessionUserID(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
 		return
 	}
 
@@ -92,10 +98,16 @@ func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
-// this function handles the logic of the single post 
+// this function handles the logic of the single post
 func HandleGetSinglePost(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	_, err := GetSessionUserID(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
+		return
+	}
 
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -107,7 +119,7 @@ func HandleGetSinglePost(w http.ResponseWriter, r *http.Request) {
 		PostID string `json:"post_id"`
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	err = json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest, "message": "Invalid request format"})

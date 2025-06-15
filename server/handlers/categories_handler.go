@@ -11,6 +11,13 @@ import (
 func HandleCategories(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	_, err := GetSessionUserID(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
+		return
+	}
+	
 	rows, err := g.DB.Query("SELECT category_name FROM categories")
 	if err != nil {
 		log.Println("Failed to retrieve categories:", err)

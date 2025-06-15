@@ -25,6 +25,10 @@ function loadCategories() {
         .then(response => response.json())
         .then(data => {
             if (data.status && data.message) {
+                if (data.status == 401) {
+                    showPage('register-login-page')
+                    return
+                }
                 errorPage(data.status, data.message)
                 showPage('ErrorPage')
                 return
@@ -53,6 +57,10 @@ function loadCategories() {
 
 // this function empties the value of the posts inputs if out
 function emptyInputs() {
+    categoryStatus = false
+    contentStatus = false
+    titleStatus = false
+    document.getElementById('submit').disabled = true
     title.value = ""
     categories = []
     content.value = ""
@@ -108,8 +116,8 @@ select.addEventListener('change', function (event) {
     if (categories.includes(selectedCategory)) return;
 
     categories.push(selectedCategory)
-    console.log(categories)
     categoryStatus = true
+    console.log(categoryStatus)
     validPost()
 
     const categoryChosen = document.createElement('div')
@@ -148,6 +156,13 @@ submit.addEventListener('click', function (event) {
 
 // this function handles the logic of adding a new post
 function addPost() {
+
+    const postData = {
+        title: title.value,
+        categories: categories,
+        content: content.value
+    }
+
     const options = {
         method: 'POST',
         headers: {
@@ -157,42 +172,40 @@ function addPost() {
         body: JSON.stringify(postData)
     }
 
-    const postData = {
-        title: title.value,
-        categories: categories,
-        content: content.value
-    }
-
     fetch('/api/newpost', options)
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === 200 && data.message === "Post created !") {
-            Toast("Post published successfully ✅")
-            showPage('home-page')
-        } 
-        else if (data.status === 400) {
-            Toast(data.message || "Invalid data sent. Please check your input.")
-        } 
-        else if (data.status === 401) {
-            showPage('register-login-page')
-            Toast("You have to login to add a post !")
-        } 
-        else if (data.status === 405) {
-            errorPage(data.status, "Method not allowed.")
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 200 && data.message === "Post created !") {
+                Toast("Post published successfully ✅")
+                showPage('home-page')
+            }
+            else if (data.status === 400) {
+                Toast(data.message || "Invalid data sent. Please check your input.")
+            }
+            else if (data.status === 401) {
+                const existingPopup = document.querySelector('.chat-popup')
+                if (existingPopup) {
+                    existingPopup.remove()
+                }
+                showPage('register-login-page')
+                Toast("You have to login to add a post !")
+            }
+            else if (data.status === 405) {
+                errorPage(data.status, "Method not allowed.")
+                showPage('ErrorPage')
+            }
+            else if (data.status === 500) {
+                errorPage(data.status, data.message || "Something went wrong while creating the post.")
+                showPage('ErrorPage')
+            }
+            else {
+                Toast("Unexpected response while creating the post.")
+            }
+        })
+        .catch(error => {
+            console.error('Error in the post:', error)
+            errorPage(500, "Failed to connect to the server. Please try again later.")
             showPage('ErrorPage')
-        } 
-        else if (data.status === 500) {
-            errorPage(data.status, data.message || "Something went wrong while creating the post.")
-            showPage('ErrorPage')
-        } 
-        else {
-            Toast("Unexpected response while creating the post.")
-        }
-    })
-    .catch(error => {
-        console.error('Error in the post:', error)
-        errorPage(500, "Failed to connect to the server. Please try again later.")
-        showPage('ErrorPage')
-    })
+        })
 }
 

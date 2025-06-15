@@ -24,7 +24,7 @@ function connectWebSocket() {
                 let onlineUsers = data.onlineUsers
                 let allUsers = data.allUsers
                 let lastMessages = data.lastMessages || {}
-
+                let lastMessageSeen = data.lastMessageSeen || {}
 
                 fetch('/api/check-session', {
                     credentials: 'include',
@@ -34,7 +34,7 @@ function connectWebSocket() {
                         if (result.message === "ok") {
                             currentChatUserId = result.userID
                             loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen)
-                        } else if (result.message === "Error in the cookie" || result.message === "try to login again") {
+                        } else if (result.status === 401) {
                             const existingPopup = document.querySelector('.chat-popup')
                             if (existingPopup) {
                                 existingPopup.remove()
@@ -43,16 +43,15 @@ function connectWebSocket() {
                         }
                     }).catch(() => {
                         showPage('register-login-page');
-                    }); let lastMessageSeen = data.lastMessageSeen || {}
+                    })
                 return
             }
 
             if (data.sender_id && data.receiver_id && data.content) {
                 appendMessageToPopup(data)
-
                 const isForMe = data.receiver_id === currentChatUserId
                 const popupOpen = document.getElementById(`chat-popup-${data.sender_id}`)
-
+                
                 if (isForMe && popupOpen) {
                     const seenUpdate = {
                         type: "seen-update",
@@ -63,38 +62,40 @@ function connectWebSocket() {
                     socket.send(JSON.stringify(seenUpdate))
                 }
             }
-
+            
         } catch (e) {
             console.error(e)
         }
     }
-
-    document.getElementById('logout').addEventListener('click', () => {
-        if (socket.readyState === WebSocket.OPEN) {
-            socket.close(1000, "User logged out");
-        }
-
-        const existingPopup = document.querySelector('.chat-popup')
-        if (existingPopup) {
-            existingPopup.remove()
-        }
-
-    })
-
+    
+    
+    
     socket.onopen = () => {
         console.log("WebSocket connected.")
         denyConnection = false
     }
+    
 
     socket.onclose = (event) => {
         console.log('WebSocket connection closed:', event)
-        denyConnection
+        denyConnection = false
     }
 
     socket.onerror = (error) => {
         console.error('WebSocket error:', error)
         denyConnection = false
     }
+
+    document.getElementById('logout').addEventListener('click', () => {
+        if (socket.readyState === WebSocket.OPEN) {
+            socket.close(1000, "User logged out")
+        }
+
+        const existingPopup = document.querySelector('.chat-popup')
+        if (existingPopup) {
+            existingPopup.remove()
+        }
+    })
 }
 
 
@@ -178,6 +179,7 @@ function openChatPopup(userId, username) {
 
 
     popup.querySelector('.send-popup-icon').addEventListener('click', () => {
+        checkSession()
         const textarea = popup.querySelector('textarea')
         const content = textarea.value.trim()
         if (!content || !socket || socket.readyState !== WebSocket.OPEN) return
@@ -235,6 +237,10 @@ function loadMoreMessages(userId, container) {
         .then(res => res.json())
         .then(data => {
             if (data.status === 401) {
+                const existingPopup = document.querySelector('.chat-popup')
+                if (existingPopup) {
+                    existingPopup.remove()
+                }
                 showPage('register-login-page')
                 Toast('You have to login to see messages')
             } else if (data.status === 400) {
@@ -300,6 +306,10 @@ function loadMessages(userId, container, offset = 0, limit = 10) {
         .then(res => res.json())
         .then(data => {
             if (data.status === 401) {
+                const existingPopup = document.querySelector('.chat-popup')
+                if (existingPopup) {
+                    existingPopup.remove()
+                }
                 showPage('register-login-page')
                 Toast('You have to login to see messages')
             } else if (data.status === 400) {

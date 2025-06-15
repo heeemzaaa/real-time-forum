@@ -28,10 +28,18 @@ function checkSession() {
     .then(response => response.json())
     .then(result => {
       if (result.status === 200 && result.message === "ok") {
-        showPage('home-page');
+        showPage('home-page')
       } else if (result.status === 401) {
+        const existingPopup = document.querySelector('.chat-popup')
+        if (existingPopup) {
+          existingPopup.remove()
+        }
         showPage('register-login-page')
       } else {
+        const existingPopup = document.querySelector('.chat-popup')
+        if (existingPopup) {
+          existingPopup.remove()
+        }
         errorPage(result.status || 500, result.message || "Unexpected error");
         showPage('ErrorPage');
       }
@@ -84,6 +92,10 @@ function loadPosts() {
     .then(response => response.json())
     .then(data => {
       if (data.status && data.message) {
+        if (data.status == 401) {
+            showPage('register-login-page')
+            return
+        }
         errorPage(data.status, data.message)
         showPage('ErrorPage')
         return

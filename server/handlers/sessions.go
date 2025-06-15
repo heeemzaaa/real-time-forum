@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -73,11 +74,31 @@ func CheckSession(w http.ResponseWriter, r *http.Request) {
 	var userID string
 	err = g.DB.QueryRow("SELECT user_id,expires_at FROM Session WHERE id = ?", cookie.Value).Scan(&userID, &expiration)
 	if err != nil || time.Now().After(expiration) {
-		log.Println("Error:" , err)
+		log.Println("Error:", err)
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized ,"message": "try to login again"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "try to login again"})
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "ok", "userID": userID})
+}
+
+func GetSessionUserID(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		return "", fmt.Errorf("missing cookie: %w", err)
+	}
+
+	var userID string
+	var expiration time.Time
+	err = g.DB.QueryRow("SELECT user_id, expires_at FROM Session WHERE id = ?", cookie.Value).Scan(&userID, &expiration)
+	if err != nil {
+		return "", fmt.Errorf("invalid session: %w", err)
+	}
+
+	if time.Now().After(expiration) {
+		return "", fmt.Errorf("session expired")
+	}
+
+	return userID, nil
 }

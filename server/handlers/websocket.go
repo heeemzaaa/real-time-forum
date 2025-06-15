@@ -26,6 +26,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -90,6 +91,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
+
 		if message.Type == "seen-update" {
 			_, err = g.DB.Exec(`UPDATE Messages SET seen = 1 WHERE sender_id = ? AND receiver_id = ? AND seen = 0`, message.SenderID, message.ReceiverID)
 			if err != nil {
@@ -163,7 +165,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		BroadcastUserStatus(userID)
 	}
 }
-
 
 // this function returns both online users and all users
 func GetOnlineUsers(userID string) (map[string]bool, map[string]string) {
@@ -295,36 +296,8 @@ func DeleteConnection(userID string, conn *websocket.Conn) {
 	g.ActiveConnectionsMutex.Lock()
 	defer g.ActiveConnectionsMutex.Unlock()
 
-	connections, exist := g.ActiveConnections[userID]
-	if !exist {
-		return
-	}
-
-	index := -1
-	for i, c := range connections {
-		if c.Conn == conn {
-			index = i
-			break
-		}
-	}
-
-	if index >= 0 {
-		newConnections := make([]*g.Connection, 0, len(connections)-1)
-		for i, c := range connections {
-			if i != index {
-				newConnections = append(newConnections, c)
-			}
-		}
-		connections = newConnections
-	}
-
-	if len(connections) == 0 {
-		delete(g.ActiveConnections, userID)
-	} else {
-		g.ActiveConnections[userID] = connections
-	}
+	delete(g.ActiveConnections, userID)
 }
-
 
 // Get messages between current user and the specified user
 func HandleGetMessages(w http.ResponseWriter, r *http.Request) {

@@ -17,11 +17,18 @@ func HandleGetComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, err := GetSessionUserID(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
+		return
+	}
+
 	var requestBody struct {
 		PostID string `json:"post_id"`
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	err = json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -89,12 +96,19 @@ func HandleAddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, err := GetSessionUserID(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
+		return
+	}
+
 	var commentData struct {
 		PostID  string `json:"post_id"`
 		Content string `json:"content"`
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&commentData)
+	err = json.NewDecoder(r.Body).Decode(&commentData)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)

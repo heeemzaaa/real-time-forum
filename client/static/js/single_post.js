@@ -1,5 +1,6 @@
 // this function shows the post you clicked on with its comments
 function showSinglePost(postId) {
+
     const options = {
         method: 'POST',
         headers: {
@@ -13,6 +14,10 @@ function showSinglePost(postId) {
         .then(response => response.json())
         .then(data => {
             if (data.status && data.message) {
+                if (data.status == 401) {
+                    showPage('register-login-page')
+                    return
+                }
                 errorPage(data.status, data.message)
                 showPage('ErrorPage')
                 return
@@ -68,6 +73,11 @@ function loadComments(postId) {
                     noComments.className = 'noComments'
                     noComments.textContent = 'No comments yet. Be the first to comment!'
                     commentsList.appendChild(noComments)
+                    return
+                }
+                
+                if (data.status == 401) {
+                    showPage('register-login-page')
                     return
                 }
 
@@ -137,34 +147,38 @@ function submitComment(postId) {
     }
 
     fetch('/api/add-comment', options)
-    .then(response => response.json())
-    .then(result => {
-        if (result.status === 200 && result.message === "Comment added successfully") {
-            document.getElementById('commentContent').value = ""
-            loadComments(postId)
-        } 
-        else if (result.status === 401) {
-            showPage('register-login-page')
-            Toast("You have to login to add a comment")
-        } 
-        else if (result.status === 400) {
-            Toast(result.message || "Invalid input. Please try again.")
-        } 
-        else if (result.status === 405) {
-            errorPage(result.status, "Method not allowed")
+        .then(response => response.json())
+        .then(result => {
+            if (result.status === 200 && result.message === "Comment added successfully") {
+                document.getElementById('commentContent').value = ""
+                loadComments(postId)
+            }
+            else if (result.status === 401) {
+                const existingPopup = document.querySelector('.chat-popup')
+                if (existingPopup) {
+                    existingPopup.remove()
+                }
+                showPage('register-login-page')
+                Toast("You have to login to add a comment")
+            }
+            else if (result.status === 400) {
+                Toast(result.message || "Invalid input. Please try again.")
+            }
+            else if (result.status === 405) {
+                errorPage(result.status, "Method not allowed")
+                showPage('ErrorPage')
+            }
+            else if (result.status === 500) {
+                errorPage(result.status, "Server error while submitting comment.")
+                showPage('ErrorPage')
+            }
+            else {
+                Toast("Unexpected error while submitting comment.")
+            }
+        })
+        .catch(error => {
+            console.error("Error adding comment:", error)
+            errorPage(500, "Failed to connect to the server.")
             showPage('ErrorPage')
-        }
-        else if (result.status === 500) {
-            errorPage(result.status, "Server error while submitting comment.")
-            showPage('ErrorPage')
-        } 
-        else {
-            Toast("Unexpected error while submitting comment.")
-        }
-    })
-    .catch(error => {
-        console.error("Error adding comment:", error)
-        errorPage(500, "Failed to connect to the server.")
-        showPage('ErrorPage')
-    })
+        })
 }

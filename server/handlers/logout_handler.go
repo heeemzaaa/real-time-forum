@@ -12,15 +12,14 @@ import (
 func HandleLogout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	cookie, err := r.Cookie("session_id")
+	userID, err := GetSessionUserID(r)
 	if err != nil {
-		log.Println("Failed to get cookie:", err)
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "Failed to get the session Id!"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
 		return
 	}
 
-	_, err = g.DB.Exec("DELETE FROM Session WHERE id = ?", cookie.Value)
+	_, err = g.DB.Exec("DELETE FROM Session WHERE id = ?", userID)
 	if err != nil {
 		log.Println("Failed to delete session:", err)
 		w.WriteHeader(http.StatusInternalServerError)

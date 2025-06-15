@@ -14,6 +14,12 @@ import (
 // this function handles the logic of adding a post
 func PostHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	_, err := GetSessionUserID(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
+		return
+	}
 
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -21,7 +27,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var post g.Post
-	err := json.NewDecoder(r.Body).Decode(&post)
+	err = json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
 		log.Println("Failed to read the json data:", err)
 		w.WriteHeader(http.StatusBadRequest)
