@@ -4,6 +4,7 @@ let socket = null
 let isOpen = false
 let denyConnection = false
 
+// this function connects handles the connection between the frontend and the backend
 function connectWebSocket() {
     if (socket && socket.readyState === WebSocket.OPEN) {
         console.log("✅ WebSocket already connected, skipping.")
@@ -96,6 +97,8 @@ function connectWebSocket() {
     }
 }
 
+
+// this function serves the list of users with their status, if online or offline
 function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageSeen) {
     userList.innerHTML = ''
 
@@ -130,6 +133,7 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageS
     }
 }
 
+// an event listener on each user to open the chat popup between them
 document.addEventListener('click', function (e) {
     if (e.target.closest('.user-item')) {
         const userEl = e.target.closest('.user-item')
@@ -139,6 +143,8 @@ document.addEventListener('click', function (e) {
     }
 })
 
+
+// this function handles the logic of the chat popup , opens it , add messages in its body
 function openChatPopup(userId, username) {
     const existingPopup = document.querySelector('.chat-popup')
     if (existingPopup) existingPopup.remove()
@@ -200,6 +206,8 @@ function openChatPopup(userId, username) {
 
 }
 
+
+// this function does the debounce logic
 function debounce(func, delay) {
     let timer
     return function (...args) {
@@ -208,10 +216,11 @@ function debounce(func, delay) {
     }
 }
 
+
+// this function load messages after the first scroll up
 function loadMoreMessages(userId, container) {
     let offset = parseInt(container.dataset.offset || '0')
-
-    fetch('/api/get-messages', {
+    const options = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -220,11 +229,14 @@ function loadMoreMessages(userId, container) {
             offset: offset,
             limit: 10
         })
-    })
+    }
+
+    fetch('/api/get-messages', options)
         .then(res => res.json())
         .then(data => {
             if (data.status === 401) {
                 showPage('register-login-page')
+                Toast('You have to login to see messages')
             } else if (data.status === 400) {
                 Toast(data.message || 'Invalid request')
             } else if (data.status === 500) {
@@ -270,68 +282,47 @@ function loadMoreMessages(userId, container) {
         })
 }
 
-function loadMoreMessages(userId, container) {
-    let offset = parseInt(container.dataset.offset || '0')
 
-    fetch('/api/get-messages', {
+// this function handles the logic of the first ten messages
+function loadMessages(userId, container, offset = 0, limit = 10) {
+    const options = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
             user_id: userId,
             offset: offset,
-            limit: 10
+            limit: limit
         })
-    })
+    }
+
+    fetch('/api/get-messages', options)
         .then(res => res.json())
         .then(data => {
             if (data.status === 401) {
                 showPage('register-login-page')
+                Toast('You have to login to see messages')
             } else if (data.status === 400) {
                 Toast(data.message || 'Invalid request')
             } else if (data.status === 500) {
                 errorPage(data.status, data.message || 'Server error while loading messages.')
                 showPage('ErrorPage')
             } else if (Array.isArray(data)) {
-                const scrollHeightBefore = container.scrollHeight
-                const oldScrollTop = container.scrollTop
-
-                data.reverse().forEach(msg => {
-                    const firstChild = container.firstChild
-                    const div = document.createElement('div')
-                    const isSender = msg.sender_id === currentChatUserId
-                    div.classList.add('message-item', isSender ? 'sent' : 'received')
-
-                    const timestamp = new Date(msg.timestamp || Date.now()).toLocaleTimeString('fr-FR', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    })
-
-                    div.innerHTML = `
-                    <div class="message-content">${msg.content}</div>
-                    <div class="message-meta">
-                        <span>by: ${msg.username}</span>
-                        <span>${timestamp}</span>
-                    </div>
-                `
-                    container.insertBefore(div, firstChild)
-                })
-
-                const newHeight = container.scrollHeight
-                container.scrollTop = newHeight - scrollHeightBefore + oldScrollTop
-                container.dataset.offset = offset + 10
+                data.forEach(msg => appendMessagesFromLoading(container, msg))
+                container.scrollTop = container.scrollHeight
             } else {
-                Toast('Unexpected error loading more messages.')
+                Toast('Unexpected error loading messages.')
             }
         })
         .catch(err => {
-            console.error("Error loading more messages:", err)
-            errorPage(500, 'Failed to load more messages. Try again later.')
+            console.error('Error fetching messages:', err)
+            errorPage(500, 'Failed to fetch messages. Try again later.')
             showPage('ErrorPage')
         })
 }
 
+
+// this function handles the logic of adding messages to a the popup body
 function appendMessageToPopup(msg) {
     const popup = document.getElementById(`chat-popup-${msg.sender_id}`) || document.getElementById(`chat-popup-${msg.receiver_id}`)
     if (!popup) return
@@ -341,6 +332,8 @@ function appendMessageToPopup(msg) {
     container.scrollTop = container.scrollHeight
 }
 
+
+// append the new messages , whenever they are sent
 function appendMessageToContainer(container, msg) {
     const isSender = msg.sender_id === currentChatUserId
 
@@ -364,6 +357,8 @@ function appendMessageToContainer(container, msg) {
     container.appendChild(div)
 }
 
+
+// this function append the loaded messages before
 function appendMessagesFromLoading(container, msg) {
     const isSender = msg.sender_id === currentChatUserId
 

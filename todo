@@ -9,4 +9,5 @@ replace debounce with mine
 scrolling
 time format in js
 insertBefore
-
+e.target.closest
+why method post on loading

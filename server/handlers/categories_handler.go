@@ -7,7 +7,10 @@ import (
 	g "real-time-forum/server/globalVar"
 )
 
+// this function handles the case of loading categories
 func HandleCategories(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	rows, err := g.DB.Query("SELECT category_name FROM categories")
 	if err != nil {
 		log.Println("Failed to retrieve categories:", err)
@@ -28,7 +31,6 @@ func HandleCategories(w http.ResponseWriter, r *http.Request) {
 		g.SliceOfCategories = append(g.SliceOfCategories, categories)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(g.SliceOfCategories)
 	g.SliceOfCategories = nil
 }

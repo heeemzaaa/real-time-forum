@@ -70,6 +70,7 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 }
 
 
+
 // this function insert a new client into the database
 func RegisterClient(user g.User) (string, error) {
 	id := uuid.New().String()

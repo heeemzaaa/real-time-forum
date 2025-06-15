@@ -18,6 +18,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+// this function handles the websocket logic from connecting to deconnecting
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -162,6 +163,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		BroadcastUserStatus(userID)
 	}
 }
+
 
 // this function returns both online users and all users
 func GetOnlineUsers(userID string) (map[string]bool, map[string]string) {
@@ -322,6 +324,7 @@ func DeleteConnection(userID string, conn *websocket.Conn) {
 		g.ActiveConnections[userID] = connections
 	}
 }
+
 
 // Get messages between current user and the specified user
 func HandleGetMessages(w http.ResponseWriter, r *http.Request) {

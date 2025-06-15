@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"path/filepath"
 
 	g "real-time-forum/server/globalVar"
 	h "real-time-forum/server/handlers"
@@ -24,13 +23,12 @@ func init() {
 
 func main() {
 	var err error
-	g.Tpl, err = g.Tpl.ParseFiles(filepath.Join("client", "templates", "index.html"))
+	g.Tpl, err = g.Tpl.ParseFiles("client/templates/index.html")
 	if err != nil {
 		log.Fatal("Error in the parsing!")
 	}
 	// Serve static files (css, js)
-	fs := http.FileServer(http.Dir(filepath.Join("client", "static")))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.HandleFunc("/static/", h.HandleStatic)
 
 	// API endpoint
 	http.HandleFunc("/api/check-session", h.CheckSession)
@@ -49,9 +47,7 @@ func main() {
 	http.HandleFunc("/api/get-messages", h.HandleGetMessages)
 
 	// Catch-all: Serve index.html for all frontend routes
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("client", "templates", "index.html"))
-	})
+	http.HandleFunc("/", h.HandleTemplate)
 
 	log.Println("Server running on http://localhost:8080/")
 	http.ListenAndServe(":8080", nil)

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// this function gets all the comments of a choosing post, fetch them and send them to frontend
 func HandleGetComments(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -31,7 +32,7 @@ func HandleGetComments(w http.ResponseWriter, r *http.Request) {
 	if requestBody.PostID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Post ID is required"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest, "message": "Post ID is required"})
 		return
 	}
 
@@ -46,7 +47,7 @@ func HandleGetComments(w http.ResponseWriter, r *http.Request) {
 		log.Println("Failed to retrieve comments:", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Failed to retrieve comments"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Failed to retrieve comments"})
 		return
 	}
 	defer rows.Close()
@@ -68,6 +69,12 @@ func HandleGetComments(w http.ResponseWriter, r *http.Request) {
 		}
 
 		comments = append(comments, comment)
+	}
+
+	if len(comments) == 0 {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "this post has no comments"})
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")

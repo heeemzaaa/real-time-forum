@@ -88,6 +88,7 @@ func AddPost(post g.Post) error {
 	return nil
 }
 
+
 // this function checks if a category is already in database , if not it inserts the category to it
 func AddCategory(categories []string) error {
 	for _, category := range categories {

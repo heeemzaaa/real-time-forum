@@ -7,6 +7,7 @@ import (
 	g "real-time-forum/server/globalVar"
 )
 
+// this function handles the logic of all posts in the home page
 func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -70,7 +71,8 @@ func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
 		posts = append(posts, post)
 	}
 
-	if err = rows.Err(); err != nil {
+	err = rows.Err()
+	if err != nil {
 		log.Println("Error iterating over rows:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error processing posts"})
@@ -90,6 +92,8 @@ func HandleGetPosts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+// this function handles the logic of the single post 
 func HandleGetSinglePost(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
