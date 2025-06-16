@@ -17,7 +17,7 @@ func HandleCategories(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
 		return
 	}
-	
+
 	rows, err := g.DB.Query("SELECT category_name FROM categories")
 	if err != nil {
 		log.Println("Failed to retrieve categories:", err)
@@ -36,6 +36,11 @@ func HandleCategories(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		g.SliceOfCategories = append(g.SliceOfCategories, categories)
+	}
+
+	if len(g.SliceOfCategories) == 0 {
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "There is no categories"})
+		return
 	}
 
 	json.NewEncoder(w).Encode(g.SliceOfCategories)

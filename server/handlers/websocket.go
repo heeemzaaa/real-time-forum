@@ -92,6 +92,12 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if message.Type == "offline" {
+			log.Println("cc")
+			BroadcastUserStatus(userID)
+			return
+		}
+
 		if message.Type == "seen-update" {
 			_, err = g.DB.Exec(`UPDATE Messages SET seen = 1 WHERE sender_id = ? AND receiver_id = ? AND seen = 0`, message.SenderID, message.ReceiverID)
 			if err != nil {

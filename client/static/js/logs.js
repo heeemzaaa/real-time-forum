@@ -18,7 +18,7 @@ const signup = {
         status: false
     },
     gender: {
-        rgx: /^(male|female|other)$/i,
+        rgx: /^(male|female)$/i,
         input: document.getElementById('gender'),
         error: document.getElementById('genderError'),
         status: false
@@ -80,17 +80,7 @@ const login = {
     },
 }
 
-// Listeners
-signup.username.input.addEventListener("input", () => test(signup.username, signup))
-signup.email.input.addEventListener("input", () => test(signup.email, signup))
-signup.age.input.addEventListener("input", () => test(signup.age, signup))
-signup.gender.input.addEventListener("input", () => test(signup.gender, signup))
-signup.firstname.input.addEventListener("input", () => test(signup.firstname, signup))
-signup.lastname.input.addEventListener("input", () => test(signup.lastname, signup))
-signup.password.input.addEventListener("input", () => test(signup.password, signup))
-signup.button.addEventListener('click', (event) => {
-    event.preventDefault()
-
+function signUp() {
     const user = {
         Username: signup.username.input.value,
         Email: signup.email.input.value,
@@ -133,13 +123,24 @@ signup.button.addEventListener('click', (event) => {
             console.error(error)
 
         })
-});
+}
 
-login.emailusername.input.addEventListener('input', () => test(login.emailusername, login));
-login.password.input.addEventListener("input", () => test(login.password, login));
-login.button.addEventListener('click', (event) => {
+// Listeners
+signup.username.input.addEventListener("input", () => test(signup.username, signup))
+signup.email.input.addEventListener("input", () => test(signup.email, signup))
+signup.age.input.addEventListener("input", () => test(signup.age, signup))
+signup.gender.input.addEventListener("input", () => test(signup.gender, signup))
+signup.firstname.input.addEventListener("input", () => test(signup.firstname, signup))
+signup.lastname.input.addEventListener("input", () => test(signup.lastname, signup))
+signup.password.input.addEventListener("input", () => test(signup.password, signup))
+signup.button.addEventListener('click', (event) => {
     event.preventDefault()
 
+    signUp()
+    emptyLogsInputs()
+})
+
+function logIn() {
     const user = {
         UsernameOrEmail: login.emailusername.input.value,
         Password: login.password.input.value
@@ -176,9 +177,18 @@ login.button.addEventListener('click', (event) => {
             showPage('ErrorPage')
 
         })
+}
+
+login.emailusername.input.addEventListener('input', () => test(login.emailusername, login));
+login.password.input.addEventListener("input", () => test(login.password, login));
+login.button.addEventListener('click', (event) => {
+    event.preventDefault()
+
+    logIn()
+    emptyLogsInputs()
 });
 
-document.getElementById('logout').addEventListener('click', () => {
+function logOut() {
     fetch('/api/logout', {
         credentials: 'include'
     })
@@ -200,6 +210,10 @@ document.getElementById('logout').addEventListener('click', () => {
             showPage('ErrorPage')
 
         })
+}
+
+document.getElementById('logout').addEventListener('click', () => {
+    logOut()
 })
 
 // utils
@@ -212,5 +226,46 @@ function test(obj, method) {
         obj.error.classList.remove('hidden')
         obj.error.style.color = 'red'
     }
-    method.check();
+    method.check()
+}
+
+function emptyLogsInputs() {
+    signup.username.input.value = ""
+    signup.email.input.value = ""
+    signup.age.input.value = ""
+    signup.gender.input.value = ""
+    signup.firstname.input.value = ""
+    signup.lastname.input.value = ""
+    signup.password.input.value = ""
+
+    signup.username.status = false
+    signup.username.error.classList.add("hidden")
+    signup.email.status = false
+
+    signup.email.error.classList.add("hidden")
+    signup.age.status = false
+
+    signup.age.error.classList.add("hidden")
+    signup.gender.status = false
+
+    signup.gender.error.classList.add("hidden")
+    signup.firstname.status = false
+
+    signup.firstname.error.classList.add("hidden")
+    signup.lastname.status = false
+
+    signup.lastname.error.classList.add("hidden")
+    signup.password.status = false
+
+    signup.password.error.classList.add("hidden")
+
+    login.emailusername.input.value = ""
+    login.password.input.value = ""
+
+    login.emailusername.status = false
+
+    login.emailusername.error.classList.add("hidden")
+    login.password.status = false
+
+    login.password.error.classList.add("hidden")
 }

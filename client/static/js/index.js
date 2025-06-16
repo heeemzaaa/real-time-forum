@@ -56,7 +56,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // this function handles the logic of the page that we should show to the user
 function showPage(pageId) {
   let doNotConnect = (pageId === 'register-login-page' || pageId === 'ErrorPage')
-  
+
   pages.forEach(id => {
     document.getElementById(id).style.display = (id === pageId) ? 'block' : 'none'
   })
@@ -74,6 +74,8 @@ function showPage(pageId) {
   } else if (pageId === 'add-post-page') {
     loadCategories()
     emptyInputs()
+  } else if (pageId === 'register-login-page') {
+    emptyLogsInputs()
   }
 }
 
@@ -82,7 +84,7 @@ function loadPosts() {
   fetch('/api/get-posts')
     .then(response => response.json())
     .then(data => {
-      if (data.status && data.message) {
+      if (data.status != 200 && data.message) {
         if (data.status == 401) {
           closePopup()
           showPage('register-login-page')
@@ -94,19 +96,20 @@ function loadPosts() {
         return
       }
 
+      if (data.status == 200 && data.message == "There is no posts") {
+        postsContainer.innerHTML = ""
+        displayNoPosts()
+        return
+      }
+
       if (!Array.isArray(data)) {
         errorPage(500, "Unexpected data format while loading posts.")
         showPage('ErrorPage')
         return
       }
 
+
       postsContainer.innerHTML = ""
-
-      if (data.length === 0) {
-        displayNoPosts()
-        return
-      }
-
       renderPosts(data)
     })
     .catch(error => {

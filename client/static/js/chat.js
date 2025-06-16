@@ -52,6 +52,7 @@ function connectWebSocket() {
                 typeof data.receiver_id === "string" && data.receiver_id.trim() !== "" &&
                 typeof data.content === "string" && data.content.trim() !== ""
             ) {
+                
                 appendMessageToPopup(data)
 
                 const isForMe = data.receiver_id === currentChatUserId
@@ -90,8 +91,9 @@ function connectWebSocket() {
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.close(1000, "User logged out")
         }
-
+        socket.send(JSON.stringify({ type: "offline" }))
         closePopup()
+        return
     })
 }
 
@@ -190,8 +192,27 @@ function openChatPopup(userId, username) {
     socket.send(JSON.stringify(seenUpdate))
 
 
-    popup.querySelector('.send-popup-icon').addEventListener('click', () => {
-        checkSession()
+    popup.querySelector('.send-popup-icon').addEventListener('click', async () => {
+        let permission = false
+        await fetch('/api/check-session', {
+            credentials: 'include',
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status == 401) {
+                    permission = false
+                    showPage('register-login-page')
+                    closePopup()
+                    Toast('You must login to send a message')
+                    return
+                } else {
+                    permission = true
+                    return
+                }
+            })
+            if (permission === false) {
+                return
+            }
         const textarea = popup.querySelector('textarea')
         const content = textarea.value.trim()
         if (!content || !socket || socket.readyState !== WebSocket.OPEN) return

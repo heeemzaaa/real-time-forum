@@ -24,7 +24,7 @@ function loadCategories() {
     })
         .then(response => response.json())
         .then(data => {
-            if (data.status && data.message) {
+            if (data.status != 200 && data.message) {
                 if (data.status == 401) {
                     closePopup()
                     showPage('register-login-page')
@@ -36,12 +36,15 @@ function loadCategories() {
                 return
             }
 
+            if (data.status == 200 && data.message == "There is no categories") {
+                return
+            }
+
             if (!Array.isArray(data)) {
                 errorPage(500, "Unexpected response format while loading categories.")
                 showPage('ErrorPage')
                 return
             }
-            selectCategories.innerHTML = '<option value="" selected disabled style="color: gray;">Choose category or more</option>'
             data.forEach(category => {
                 categoriesSlice.push(category.Category_name)
                 const option = document.createElement('option')
@@ -62,12 +65,16 @@ function emptyInputs() {
     categoryStatus = false
     contentStatus = false
     titleStatus = false
+
     title.value = ""
     categories = []
     content.value = ""
     custom.value = ""
+    select.innerHTML = '<option value="" selected disabled style="color: gray;">Choose category or more</option>'
     choosenCategories.innerHTML = ''
     document.getElementById('submit').disabled = true
+    categoryError.classList.add('hidden')
+    document.getElementById('contentError').classList.add('hidden')
 }
 
 // this function handles the logic if all the inputs are valid to proceed to add the post
@@ -96,29 +103,31 @@ addCategory.addEventListener('click', function (event) {
     newCategory = custom.value
 
     for (let i = 0; i < categoriesSlice.length; i++) {
-        if (newCategory === categoriesSlice[i].Category_name) {
+        if (newCategory === categoriesSlice[i]) {
             categoryError.classList.remove('hidden')
             categoryError.style.color = 'red'
+            setTimeout(() => {
+                categoryError.classList.add('hidden')
+            }, 3000)
             return
         }
     }
-
     categoriesSlice.push(newCategory)
     categoryError.classList.add('hidden')
     let option = document.createElement('option')
     option.value = newCategory
     option.textContent = newCategory
     selectCategories.appendChild(option)
-    console.log(categoriesSlice)
+    Toast('Category added successfuly')
 })
 
 // event listener on selecting categories
 select.addEventListener('change', function (event) {
-    let selectedCategory = event.target.value;
+    let selectedCategory = event.target.value
 
     if (categories.includes(selectedCategory)) return
     if (!(categoriesSlice.includes(selectedCategory))) return
-    
+
     categories.push(selectedCategory)
     categoryStatus = true
     validPost()
