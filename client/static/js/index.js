@@ -30,16 +30,10 @@ function checkSession() {
       if (result.status === 200 && result.message === "ok") {
         showPage('home-page')
       } else if (result.status === 401) {
-        const existingPopup = document.querySelector('.chat-popup')
-        if (existingPopup) {
-          existingPopup.remove()
-        }
+        closePopup()
         showPage('register-login-page')
       } else {
-        const existingPopup = document.querySelector('.chat-popup')
-        if (existingPopup) {
-          existingPopup.remove()
-        }
+        closePopup()
         errorPage(result.status || 500, result.message || "Unexpected error");
         showPage('ErrorPage');
       }
@@ -61,15 +55,21 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // this function handles the logic of the page that we should show to the user
 function showPage(pageId) {
+  let doNotConnect = (pageId === 'register-login-page' || pageId === 'ErrorPage')
+  
   pages.forEach(id => {
     document.getElementById(id).style.display = (id === pageId) ? 'block' : 'none'
   })
 
+  if (!doNotConnect) {
+    connectWebSocket()
+  }
+
   navbar.style.display = (pageId === 'register-login-page' || pageId === 'ErrorPage') ? 'none' : 'flex'
   toPostButton.style.display = (pageId === 'add-post-page' || pageId === 'register-login-page' || pageId === 'ErrorPage') ? 'none' : 'flex'
 
+
   if (pageId === 'home-page') {
-    connectWebSocket()
     loadPosts()
   } else if (pageId === 'add-post-page') {
     loadCategories()
@@ -79,22 +79,15 @@ function showPage(pageId) {
 
 // this functions load the post to the home page, handles the case of no posts , and the case of posts
 function loadPosts() {
-  const options = {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify()
-  }
-
-  fetch('/api/get-posts', options)
+  fetch('/api/get-posts')
     .then(response => response.json())
     .then(data => {
       if (data.status && data.message) {
         if (data.status == 401) {
-            showPage('register-login-page')
-            return
+          closePopup()
+          showPage('register-login-page')
+          Toast('You must login to see posts')
+          return
         }
         errorPage(data.status, data.message)
         showPage('ErrorPage')
@@ -140,8 +133,8 @@ function renderPosts(posts) {
     const postCard = document.createElement('div');
     postCard.id = "postCard";
     postCard.addEventListener('click', () => {
-      showSinglePost(post.id);
-    });
+      showSinglePost(post.id)
+    })
     postCard.style.cursor = "pointer";
 
     const createdDate = new Date(post.created_at);

@@ -31,7 +31,7 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	if user.Username == "" || user.Email == "" || user.PasswordHash == "" || user.FirstName == "" || user.LastName == "" || user.Gender == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest , "message": "Please fill in all required fields"})
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest , "message": "All fields are required"})
 		return
 	}
 

@@ -15,7 +15,9 @@ function showSinglePost(postId) {
         .then(data => {
             if (data.status && data.message) {
                 if (data.status == 401) {
+                    closePopup()
                     showPage('register-login-page')
+                    Toast('You must login to see this post')
                     return
                 }
                 errorPage(data.status, data.message)
@@ -75,9 +77,11 @@ function loadComments(postId) {
                     commentsList.appendChild(noComments)
                     return
                 }
-                
+
                 if (data.status == 401) {
+                    closePopup()
                     showPage('register-login-page')
+                    Toast('You must login to see the comment')
                     return
                 }
 
@@ -154,12 +158,9 @@ function submitComment(postId) {
                 loadComments(postId)
             }
             else if (result.status === 401) {
-                const existingPopup = document.querySelector('.chat-popup')
-                if (existingPopup) {
-                    existingPopup.remove()
-                }
+                closePopup()
                 showPage('register-login-page')
-                Toast("You have to login to add a comment")
+                Toast("You must login to add a comment")
             }
             else if (result.status === 400) {
                 Toast(result.message || "Invalid input. Please try again.")

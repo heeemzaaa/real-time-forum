@@ -26,7 +26,9 @@ function loadCategories() {
         .then(data => {
             if (data.status && data.message) {
                 if (data.status == 401) {
+                    closePopup()
                     showPage('register-login-page')
+                    Toast('You must login to fetch the categories')
                     return
                 }
                 errorPage(data.status, data.message)
@@ -41,7 +43,7 @@ function loadCategories() {
             }
             selectCategories.innerHTML = '<option value="" selected disabled style="color: gray;">Choose category or more</option>'
             data.forEach(category => {
-                categoriesSlice.push(category)
+                categoriesSlice.push(category.Category_name)
                 const option = document.createElement('option')
                 option.value = category.Category_name
                 option.textContent = category.Category_name
@@ -60,12 +62,12 @@ function emptyInputs() {
     categoryStatus = false
     contentStatus = false
     titleStatus = false
-    document.getElementById('submit').disabled = true
     title.value = ""
     categories = []
     content.value = ""
     custom.value = ""
     choosenCategories.innerHTML = ''
+    document.getElementById('submit').disabled = true
 }
 
 // this function handles the logic if all the inputs are valid to proceed to add the post
@@ -107,17 +109,18 @@ addCategory.addEventListener('click', function (event) {
     option.value = newCategory
     option.textContent = newCategory
     selectCategories.appendChild(option)
+    console.log(categoriesSlice)
 })
 
 // event listener on selecting categories
 select.addEventListener('change', function (event) {
     let selectedCategory = event.target.value;
 
-    if (categories.includes(selectedCategory)) return;
-
+    if (categories.includes(selectedCategory)) return
+    if (!(categoriesSlice.includes(selectedCategory))) return
+    
     categories.push(selectedCategory)
     categoryStatus = true
-    console.log(categoryStatus)
     validPost()
 
     const categoryChosen = document.createElement('div')
@@ -183,10 +186,7 @@ function addPost() {
                 Toast(data.message || "Invalid data sent. Please check your input.")
             }
             else if (data.status === 401) {
-                const existingPopup = document.querySelector('.chat-popup')
-                if (existingPopup) {
-                    existingPopup.remove()
-                }
+                closePopup()
                 showPage('register-login-page')
                 Toast("You have to login to add a post !")
             }

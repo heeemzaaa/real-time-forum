@@ -14,7 +14,8 @@ import (
 // this function handles the logic of adding a post
 func PostHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	_, err := GetSessionUserID(r)
+	
+	userId, err := GetSessionUserID(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
@@ -35,6 +36,12 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(post.Categories) == 0 || post.Title == "" || post.Content == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest, "message": "All fields are required"})
+		return
+	}
+
 	err = AddCategory(post.Categories)
 	if err != nil {
 		log.Println("Failed to add categories:", err)
@@ -43,35 +50,18 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie, err := r.Cookie("session_id")
-	if err != nil {
-		log.Println("Failed to fetch the cookie:", err)
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "Please login to add a post !"})
-		return
-	}
-
-	sessionId := cookie.Value
-	userId := ""
-	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", sessionId).Scan(&userId)
-	if err != nil {
-		log.Println("Error in the database:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Failed to fetch the user id !"})
-	}
-
 	post.UserId = userId
 	err = AddPost(post)
 	if err != nil {
-		log.Println("Error adding the post:" ,err)
+		log.Println("Error adding the post:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error to add post !"})
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "Post created !"})
 }
-
 
 // this function is responsible for inserting a new post to the database
 func AddPost(post g.Post) error {
@@ -79,7 +69,7 @@ func AddPost(post g.Post) error {
 	query := `INSERT INTO posts (id,user_id,title,content) VALUES (?,?,?,?)`
 	_, err := g.DB.Exec(query, postId, post.UserId, post.Title, post.Content)
 	if err != nil {
-		log.Println("Error in the database:",err)
+		log.Println("Error in the database:", err)
 		return fmt.Errorf("db error: %v", err)
 	}
 	for _, category := range post.Categories {
@@ -93,7 +83,6 @@ func AddPost(post g.Post) error {
 
 	return nil
 }
-
 
 // this function checks if a category is already in database , if not it inserts the category to it
 func AddCategory(categories []string) error {

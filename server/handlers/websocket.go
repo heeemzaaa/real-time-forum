@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"html"
 	"log"
@@ -20,28 +21,27 @@ var upgrader = websocket.Upgrader{
 
 // this function handles the websocket logic from connecting to deconnecting
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	
-	cookie, err := r.Cookie("session_id")
+
+	userID, err := GetSessionUserID(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "Error": "Please login !"})
-		log.Println("Error in the session:", err)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
 		return
 	}
 
-	var userID string
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusMethodNotAllowed, "message": "Method not allowed"})
+		return
+	}
+
 	var userName string
-	err = g.DB.QueryRow("SELECT user_id,username FROM session WHERE id = ?", cookie.Value).Scan(&userID, &userName)
+	err = g.DB.QueryRow("SELECT username FROM users WHERE id = ?", userID).Scan(&userName)
 	if err != nil {
+		log.Println("Error fetching the username from the database:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "Error": "Error in the server"})
-		log.Println("Error fetching the userId and username from the database:", err)
 		return
 	}
 
@@ -69,7 +69,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	g.ActiveConnectionsMutex.Unlock()
 
 	BroadcastUserStatus(userID)
-
+	log.Println("Logged again")
 	defer func() {
 		log.Printf("Cleaning up connection for user %s", userName)
 		conn.Close()
@@ -102,10 +102,10 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		message.SenderID = userID
+		messageID := uuid.New().String()
 		message.SenderName = userName
 		message.Timestamp = time.Now()
 		message.Content = html.EscapeString(message.Content)
-		messageID := uuid.New().String()
 
 		var conversationID string
 		err = g.DB.QueryRow(`
@@ -264,14 +264,12 @@ func BroadcastUserStatus(initiatorID string) {
 			AllUsers     map[string]string `json:"allUsers"`
 			LastMessages map[string]string `json:"lastMessages"`
 			LastMessage  map[string]bool   `json:"lastMessageSeen"`
-			You          string            `json:"you"`
 		}{
 			Type:         "new_connection",
 			OnlineUsers:  onlineUsers,
 			AllUsers:     allUsers,
 			LastMessages: lastMessages,
 			LastMessage:  lastMessageSeen,
-			You:          userID,
 		}
 
 		status, err := json.Marshal(update)
@@ -303,24 +301,16 @@ func DeleteConnection(userID string, conn *websocket.Conn) {
 func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	currentUserID, err := GetSessionUserID(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You must be logged in"})
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusMethodNotAllowed, "message": "Method not allowed !"})
-		return
-	}
-
-	cookie, err := r.Cookie("session_id")
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You have to login to see messages"})
-		return
-	}
-
-	var currentUserID string
-	err = g.DB.QueryRow("SELECT user_id FROM Session WHERE id = ?", cookie.Value).Scan(&currentUserID)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusUnauthorized, "message": "You have to login to see messages"})
 		return
 	}
 
@@ -337,6 +327,12 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if requestBody.UserID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest, "message": "UserId is required"})
+		return
+	}
+
 	if requestBody.Limit == 0 {
 		requestBody.Limit = 10
 	}
@@ -347,6 +343,10 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 		WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)
 	`, currentUserID, requestBody.UserID, requestBody.UserID, currentUserID).Scan(&conversationID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "There's no messages to fetch , you've reached the max messages"})
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusInternalServerError, "message": "Error fetching the conversation"})
@@ -393,6 +393,11 @@ func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows.Close()
+
+	if len(messages) == 0 {
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "There's no messages to fetch , you've reached the max messages"})
+		return
+	}
 
 	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
 		messages[i], messages[j] = messages[j], messages[i]

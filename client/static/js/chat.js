@@ -16,86 +16,98 @@ function connectWebSocket() {
 
     socket = new WebSocket("ws://localhost:8080/api/ws")
 
-    socket.onmessage = (event) => {
+    socket.onopen = () => {
+        console.log("✅ WebSocket connected.")
+        denyConnection = false
+    }
+
+    socket.onmessage = async (event) => {
         try {
-            let data = JSON.parse(event.data)
+            const data = JSON.parse(event.data)
 
             if (data.type === "new_connection") {
-                let onlineUsers = data.onlineUsers
-                let allUsers = data.allUsers
-                let lastMessages = data.lastMessages || {}
-                let lastMessageSeen = data.lastMessageSeen || {}
+                const { onlineUsers, allUsers } = data
+                const lastMessages = data.lastMessages || {}
+                const lastMessageSeen = data.lastMessageSeen || {}
 
-                fetch('/api/check-session', {
-                    credentials: 'include',
-                })
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.message === "ok") {
-                            currentChatUserId = result.userID
-                            loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen)
-                        } else if (result.status === 401) {
-                            const existingPopup = document.querySelector('.chat-popup')
-                            if (existingPopup) {
-                                existingPopup.remove()
-                            }
-                            showPage('register-login-page')
-                        }
-                    }).catch(() => {
-                        showPage('register-login-page');
-                    })
+                try {
+                    const response = await fetch('/api/check-session', { credentials: 'include' })
+                    const result = await response.json()
+
+                    if (result.message === "ok") {
+                        currentChatUserId = result.userID
+                        loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen)
+                    } else if (result.status === 401) {
+                        handleUnauthorized()
+                    }
+                } catch {
+                    handleUnauthorized()
+                }
+
                 return
             }
 
-            if (data.sender_id && data.receiver_id && data.content) {
+            if (
+                typeof data.sender_id === "string" && data.sender_id.trim() !== "" &&
+                typeof data.receiver_id === "string" && data.receiver_id.trim() !== "" &&
+                typeof data.content === "string" && data.content.trim() !== ""
+            ) {
                 appendMessageToPopup(data)
+
                 const isForMe = data.receiver_id === currentChatUserId
                 const popupOpen = document.getElementById(`chat-popup-${data.sender_id}`)
-                
-                if (isForMe && popupOpen) {
-                    const seenUpdate = {
+
+                if (isForMe && popupOpen && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
                         type: "seen-update",
                         sender_id: data.sender_id,
                         receiver_id: currentChatUserId,
                         seen: true
-                    }
-                    socket.send(JSON.stringify(seenUpdate))
+                    }))
                 }
+
+
             }
-            
-        } catch (e) {
-            console.error(e)
+
+        } catch (err) {
+            console.error("❌ Error handling WebSocket message:", err)
+            errorPage(500, "Failed to connect to the server. Please try again later.")
+            showPage('ErrorPage')
         }
     }
-    
-    
-    
-    socket.onopen = () => {
-        console.log("WebSocket connected.")
-        denyConnection = false
-    }
-    
 
     socket.onclose = (event) => {
-        console.log('WebSocket connection closed:', event)
+        console.warn("⚠️ WebSocket closed:", event)
         denyConnection = false
     }
 
     socket.onerror = (error) => {
-        console.error('WebSocket error:', error)
+        console.error("❌ WebSocket error:", error)
         denyConnection = false
     }
 
     document.getElementById('logout').addEventListener('click', () => {
-        if (socket.readyState === WebSocket.OPEN) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
             socket.close(1000, "User logged out")
         }
 
-        const existingPopup = document.querySelector('.chat-popup')
-        if (existingPopup) {
-            existingPopup.remove()
-        }
+        closePopup()
     })
+}
+
+// this function closes the popup
+function closePopup() {
+    const existingPopup = document.querySelector('.chat-popup')
+    if (existingPopup) {
+        existingPopup.remove()
+    }
+}
+
+// this function handles the cases of unauthorized people
+function handleUnauthorized() {
+    closePopup()
+    showPage('register-login-page')
+    Toast('You must login')
 }
 
 
@@ -104,8 +116,8 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageS
     userList.innerHTML = ''
 
     let userEntries = Object.entries(users).filter(([id]) => id !== currentUserId)
-
     userEntries.sort((a, b) => {
+
         let aTime = lastMessages[a[0]] || ""
         let bTime = lastMessages[b[0]] || ""
 
@@ -135,7 +147,7 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageS
 }
 
 // an event listener on each user to open the chat popup between them
-document.addEventListener('click', function (e) {
+document.addEventListener('click', (e) => {
     if (e.target.closest('.user-item')) {
         const userEl = e.target.closest('.user-item')
         const userId = userEl.getAttribute('data-user-id')
@@ -204,7 +216,7 @@ function openChatPopup(userId, username) {
         if (chatBody.scrollTop === 0) {
             loadMoreMessages(userId, chatBody)
         }
-    }, 300))
+    }, 500))
 
 }
 
@@ -237,10 +249,7 @@ function loadMoreMessages(userId, container) {
         .then(res => res.json())
         .then(data => {
             if (data.status === 401) {
-                const existingPopup = document.querySelector('.chat-popup')
-                if (existingPopup) {
-                    existingPopup.remove()
-                }
+                closePopup()
                 showPage('register-login-page')
                 Toast('You have to login to see messages')
             } else if (data.status === 400) {
@@ -248,6 +257,8 @@ function loadMoreMessages(userId, container) {
             } else if (data.status === 500) {
                 errorPage(data.status, data.message || 'Server error while loading messages.')
                 showPage('ErrorPage')
+            } else if (data.status == 200 && !(Array.isArray(data))) {
+                Toast('There is no messages left to fetch')
             } else if (Array.isArray(data)) {
                 const scrollHeightBefore = container.scrollHeight
                 const oldScrollTop = container.scrollTop
@@ -306,10 +317,7 @@ function loadMessages(userId, container, offset = 0, limit = 10) {
         .then(res => res.json())
         .then(data => {
             if (data.status === 401) {
-                const existingPopup = document.querySelector('.chat-popup')
-                if (existingPopup) {
-                    existingPopup.remove()
-                }
+                closePopup()
                 showPage('register-login-page')
                 Toast('You have to login to see messages')
             } else if (data.status === 400) {
@@ -318,8 +326,10 @@ function loadMessages(userId, container, offset = 0, limit = 10) {
                 errorPage(data.status, data.message || 'Server error while loading messages.')
                 showPage('ErrorPage')
             } else if (Array.isArray(data)) {
-                data.forEach(msg => appendMessagesFromLoading(container, msg))
+                data.forEach(msg => appendMessageToContainer(container, msg))
                 container.scrollTop = container.scrollHeight
+            } else if (data.status == 200 && !(Array.isArray(data))) {
+                Toast('There is no messages to fetch')
             } else {
                 Toast('Unexpected error loading messages.')
             }
@@ -360,32 +370,7 @@ function appendMessageToContainer(container, msg) {
     div.innerHTML = `
         <div class="message-content">${msg.content}</div>
         <div class="message-meta">
-            <span>by: ${msg.sender_name}</span>
-            <span>${timestamp}</span>
-        </div>
-    `
-    container.appendChild(div)
-}
-
-
-// this function append the loaded messages before
-function appendMessagesFromLoading(container, msg) {
-    const isSender = msg.sender_id === currentChatUserId
-
-    const div = document.createElement('div')
-    div.classList.add('message-item')
-    div.classList.add(isSender ? 'sent' : 'received')
-
-    const timestamp = new Date(msg.timestamp || Date.now()).toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    })
-
-    div.innerHTML = `
-        <div class="message-content">${msg.content}</div>
-        <div class="message-meta">
-            <span>by: ${msg.username}</span>
+            <span>by: ${msg.sender_name || msg.username}</span>
             <span>${timestamp}</span>
         </div>
     `

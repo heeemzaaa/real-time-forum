@@ -154,9 +154,9 @@ login.button.addEventListener('click', (event) => {
     })
         .then(response => response.json())
         .then(data => {
-            if (data.status === 400 && data.message === "Username or Email not found !") {
+            if (data.status === 401 && data.message === "Username or Email not found !") {
                 Toast('Username or Email not found ❌')
-            } else if (data.status === 400 && data.message === "Password not correct!") {
+            } else if (data.status === 401 && data.message === "Password not correct!") {
                 Toast('Password not correct ❌')
             } else if (data.status === 405) {
                 errorPage(data.status, "Method Not Allowed")
@@ -187,6 +187,8 @@ document.getElementById('logout').addEventListener('click', () => {
             if (data.status === 500) {
                 errorPage(data.status, "Failed to log out. Try again.")
                 showPage('ErrorPage')
+            } else if (data.status === 401) {
+                showPage('register-login-page')
             } else if (data.status === 200 && data.message === "Session deleted successfully!") {
                 Toast("See you soon 👋🏼")
                 showPage('register-login-page')
@@ -202,7 +204,6 @@ document.getElementById('logout').addEventListener('click', () => {
 
 // utils
 function test(obj, method) {
-    // debounce
     if (obj.rgx.test(obj.input.value) || obj.rgx2?.test(obj.input.value)) {
         obj.status = true
         obj.error.classList.add('hidden')

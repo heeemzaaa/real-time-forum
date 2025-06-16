@@ -34,6 +34,12 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if checker.UsernameOrEmail == "" || checker.Password == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusBadRequest , "message": "All the fields are required"})
+		return
+	}
+
 	exist := 0
 	err = g.DB.QueryRow("SELECT COUNT (*) FROM users WHERE username = ? OR email = ?", checker.UsernameOrEmail, checker.UsernameOrEmail).Scan(&exist)
 	if err != nil {

@@ -83,6 +83,8 @@ func CheckSession(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "ok", "userID": userID})
 }
 
+
+// this function is for checking if the user has the right to proceed and also gives him the user ID
 func GetSessionUserID(r *http.Request) (string, error) {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
