@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"html"
 	"log"
 	"net/http"
@@ -22,7 +23,7 @@ var upgrader = websocket.Upgrader{
 // this function handles the websocket logic from connecting to deconnecting
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
+	fmt.Println("salaaaam")
 	userID, err := GetSessionUserID(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -174,8 +175,8 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 // this function returns both online users and all users
 func GetOnlineUsers(userID string) (map[string]bool, map[string]string) {
-	var OnlineUsers = make(map[string]bool)
-	var AllUsers = make(map[string]string)
+	OnlineUsers := make(map[string]bool)
+	AllUsers := make(map[string]string)
 
 	rows, err := g.DB.Query("SELECT id,username FROM users")
 	if err != nil {
@@ -254,7 +255,6 @@ func BroadcastUserStatus(initiatorID string) {
 				ORDER BY sent_at DESC
 				LIMIT 1
 				`, userID, otherUserID, otherUserID, userID).Scan(&lastMessage, &senderID, &seen)
-
 			if err != nil {
 				log.Println("Error querying last message between", userID, "and", otherUserID, ":", err)
 				continue

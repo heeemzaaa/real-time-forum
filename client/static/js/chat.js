@@ -90,6 +90,7 @@ function connectWebSocket() {
     document.getElementById('logout').addEventListener('click', () => {
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.close(1000, "User logged out")
+            showPage('register-login-page')
         }
         socket.send(JSON.stringify({ type: "offline" }))
         closePopup()
