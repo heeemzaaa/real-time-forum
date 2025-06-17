@@ -91,6 +91,7 @@ function loadPosts() {
           Toast('You must login to see posts')
           return
         }
+
         errorPage(data.status, data.message)
         showPage('ErrorPage')
         return

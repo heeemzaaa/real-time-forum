@@ -48,9 +48,9 @@ function connectWebSocket() {
             }
 
             if (
-                typeof data.sender_id === "string" && data.sender_id.trim() !== "" &&
+                (typeof data.sender_id === "string" && data.sender_id.trim() !== "" &&
                 typeof data.receiver_id === "string" && data.receiver_id.trim() !== "" &&
-                typeof data.content === "string" && data.content.trim() !== ""
+                typeof data.content === "string" && data.content.trim() !== "") 
             ) {
                 
                 appendMessageToPopup(data)
@@ -66,8 +66,6 @@ function connectWebSocket() {
                         seen: true
                     }))
                 }
-
-
             }
 
         } catch (err) {

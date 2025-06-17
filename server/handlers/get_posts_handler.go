@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
 	g "real-time-forum/server/globalVar"
 )
 
@@ -144,7 +145,6 @@ func HandleGetSinglePost(w http.ResponseWriter, r *http.Request) {
 		FROM posts p
 		WHERE p.id = ?
 	`, requestBody.PostID).Scan(&post.ID, &post.Title, &post.Content, &post.CreatedAt, &post.UserId)
-
 	if err != nil {
 		log.Println("Failed to retrieve post:", err)
 		w.WriteHeader(http.StatusInternalServerError)

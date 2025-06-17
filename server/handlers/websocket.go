@@ -77,8 +77,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for {
-		conn.SetReadDeadline(time.Now().Add(180 * time.Second))
-
 		var message g.ChatMessage
 
 		err = conn.ReadJSON(&message)
@@ -92,7 +90,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if message.Type == "offline" {
-			log.Println("cc")
 			BroadcastUserStatus(userID)
 			return
 		}

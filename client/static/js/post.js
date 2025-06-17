@@ -102,6 +102,9 @@ addCategory.addEventListener('click', function (event) {
     event.preventDefault()
     newCategory = custom.value
 
+    if (newCategory === "") {
+        return
+    }
     for (let i = 0; i < categoriesSlice.length; i++) {
         if (newCategory === categoriesSlice[i]) {
             categoryError.classList.remove('hidden')
