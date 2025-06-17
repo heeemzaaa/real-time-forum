@@ -4,6 +4,10 @@
 <head>
     <title>RTF</title>
     <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/add-post.css">
+    <link rel="stylesheet" href="/static/css/logs.css">
+    <link rel="stylesheet" href="/static/css/post.css">
+    <link rel="stylesheet" href="/static/css/message.css">
     <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
         integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
@@ -15,7 +19,6 @@
 <body>
     <nav id="navbar" style="display: none;">
         <div class="logo" onclick="showPage('home-page')">RTF.01</div>
-        <div class="user-menu">
             <div id="to-post">
                 <i class="fa-solid fa-plus" id="toPost"></i><span id="span-icone">New Post</span>
             </div>
@@ -23,7 +26,6 @@
             <div id="logout">
                 <i class="fa-solid fa-right-to-bracket" id="out"></i>
             </div>
-        </div>
     </nav>
 
 
@@ -36,7 +38,7 @@
                     <label for="chk" aria-hidden="true">Sign up</label>
                     <input type="text" id="username" placeholder="Nickname" required>
                     <p id="nicknameError" class="hidden">Please enter a valid nickname</p>
-                    <input type="text" id="age" placeholder="Age" required>
+                    <input type="number" id="age" placeholder="Age" required>
                     <p id="ageError" class="hidden">Please enter a valid age</p>
                     <input type="text" id="gender" placeholder="Gender" required>
                     <p id="genderError" class="hidden">Please insert a valid gender</p>
@@ -79,7 +81,7 @@
                 </div>
 
                 <div id="homePageSidebar">
-                    <h2>Chat</h2>
+                    <h2>Friends</h2>
                     <div id="homePageUsersList">
                         <!-- hna ghaykono l users -->
                     </div>

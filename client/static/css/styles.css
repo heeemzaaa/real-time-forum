@@ -13,7 +13,18 @@ body {
     color: #095aa5;
 }
 
-/* Navbar Styling */
+/* Home page layout */
+.home-content {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+.main-content {
+    flex: 1;
+    min-width: 12rem;
+}
+
 #navbar {
     width: 100%;
     height: 80px;
@@ -42,69 +53,12 @@ body {
     transform: scale(1.2);
 }
 
-.user-menu {
-    position: relative;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-}
-
-#choosenCategories {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    align-content: center;
-}
-
-.dropdown-content {
-    display: none;
-    position: absolute;
-    right: 0;
-    top: 45px;
-    background-color: white;
-    color: #0f0c29;
-    border-radius: 8px;
-    min-width: 160px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-    overflow: hidden;
-}
-
-.dropdown-content div {
-    padding: 15px 20px;
-    display: block;
-    text-decoration: none;
-    color: #0f0c29;
-    font-size: 1.1em;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.dropdown-content div:hover {
-    background-color: #095aa5;
-    color: #fff;
-}
-
-.user-menu.active .dropdown-content {
-    display: block;
-    animation: fadeIn 0.3s;
-}
-
-/* Home Page Styling - SIMPLE SINGLE POST APPROACH */
 .content-wrapper {
     width: 90%;
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 20px;
     box-sizing: border-box;
-}
-
-#home-page {
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 100px;
-    width: 100%;
 }
 
 #postsContainer {
@@ -135,7 +89,7 @@ body {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* Post Card Title */
+/* title */
 #postCard div:first-child {
     color: #095aa5;
     margin-bottom: 10px;
@@ -143,14 +97,14 @@ body {
     font-weight: 600;
 }
 
-/* Post Card Category */
+/* category */
 #postCard div:nth-child(2) {
     margin-bottom: 10px;
     color: #666;
     font-size: 25px;
 }
 
-/* Post Card Content */
+/* content */
 #postCard div:nth-child(3) {
     margin-bottom: 15px;
     font-size: 20px;
@@ -161,7 +115,7 @@ body {
     -webkit-box-orient: vertical;
 }
 
-/* Post Card Date */
+/* date */
 #postCard div:nth-child(4) {
     margin-top: auto;
     padding-top: 10px;
@@ -170,231 +124,9 @@ body {
     color: #888;
 }
 
-/* Login and Signup Forms */
-.main {
-    margin-top: 5vh;
-    margin-bottom: 5vh;
-    margin-left: auto;
-    margin-right: auto;
-    width: 500px;
-    height: 700px;
-    overflow: hidden;
-    border-radius: 10px;
-    box-shadow: 5px 20px 50px #000;
-}
 
-#chk {
-    display: none;
-}
-
-.signup {
-    position: relative;
-    width: 100%;
-    height: 100%;
-}
-
-.signup label {
-    color: #095aa5;
-    transform: scale(.6);
-}
-
-label {
-    color: #095aa5;
-    font-size: 2.3em;
-    justify-content: center;
-    display: flex;
-    margin: 50px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: .5s ease-in-out;
-}
-
-input {
-    width: 80%;
-    height: 15px;
-    background: #e0dede;
-    display: flex;
-    justify-content: center;
-    margin: 15px auto;
-    padding: 12px;
-    border: none;
-    outline: none;
-    border-radius: 5px;
-}
-
-select {
-    width: 75%;
-    height: 40px;
-    background: #e0dede;
-    justify-content: center;
-    display: flex;
-    margin: 20px auto;
-    padding: 12px;
-    border: none;
-    outline: none;
-    border-radius: 5px;
-}
-
-textarea {
-    width: 70%;
-    height: 300px;
-    background: #e0dede;
-    justify-content: center;
-    display: flex;
-    margin: 20px auto;
-    padding: 12px;
-    border: none;
-    outline: none;
-    border-radius: 5px;
-}
-
-button {
-    min-width: 60%;
-    height: 40px;
-    margin: 50px auto;
-    justify-content: center;
-    display: block;
-    color: #fff;
-    background: #095aa5;
-    font-size: 1em;
-    font-weight: bold;
-    margin-top: 30px;
-    outline: none;
-    border: none;
-    border-radius: 5px;
-    transition: .2s ease-in;
-    cursor: pointer;
-}
-
-#loginBtn {
-    min-width: 60%;
-    height: 40px;
-    margin: 10px auto;
-    justify-content: center;
-    display: block;
-    color: #095aa5;
-    background: white;
-    font-size: 1em;
-    font-weight: bold;
-    margin-top: 30px;
-    outline: none;
-    border: none;
-    border-radius: 5px;
-    transition: .2s ease-in;
-    cursor: pointer;
-}
-
-button:hover {
-    background: #564bd1;
-}
-
-.login {
-    height: 650px;
-    background: #095aa5;
-    border-radius: 60% / 10%;
-    transform: translateY(-680px);
-    transition: .8s ease-in-out;
-}
-
-.login label {
-    color: white;
-    transform: scale(1);
-}
-
-#chk:checked~.login {
-    transform: translateY(-180px);
-}
-
-#chk:checked~.login label {
-    transform: scale(.6);
-}
-
-#chk:checked~.signup label {
-    transform: scale(1);
-}
-
-
-#add-post-page {
-    margin-top: 15vh;
-    margin-bottom: 15vh;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 0;
-    width: 40%;
-    min-height: 50%;
-    overflow-y: auto;
-    border-radius: 10px;
-    box-shadow: 5px 20px 50px #000;
-    min-width: 280px;
-}
-
-/* Error messages */
 .hidden {
     display: none;
-}
-
-p {
-    margin-left: 13%;
-}
-
-#alreadyUsed,
-#fillAll {
-    margin-left: 27%;
-    margin-top: 3px;
-}
-
-#falseUser {
-    margin-left: 28%;
-}
-
-#falsePaswd {
-    margin-left: 35%;
-}
-
-/* Disabled buttons */
-#signupBtn:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-#loginBtn:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-#submit:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-#single-post-page {
-    padding-top: 120px;
-    padding-bottom: 30px;
-    width: 90%;
-    /* Increased from 100% */
-    margin: 0 auto;
-    max-width: 1400px;
-    /* Increased from 800px */
-}
-
-#singlePostContainer {
-    background-color: white;
-    color: #333;
-    border-radius: 8px;
-    border: 2px solid #095aa5;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    min-height: 180px;
-    margin-bottom: 30px;
-    box-sizing: border-box;
 }
 
 #singlePostContainer div:first-child {
@@ -435,138 +167,12 @@ p {
     color: #888;
 }
 
-
-/* Comments Section Styling */
-#commentsSection {
-    margin-top: 30px;
-}
-
-#commentsSection h2 {
-    color: #095aa5;
-    font-size: 24px;
-    margin-bottom: 20px;
-}
-
-.commentCard {
-    background-color: white;
-    border: 1px solid #095aa5;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-}
-
-.commentContent {
-    font-size: 16px;
-}
-
-.commentMeta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #888;
-}
-
-#addCommentForm {
-    margin-top: 15px;
-}
-
-#commentContent {
-    width: 97%;
-    height: 100px;
-    padding: 10px;
-    border-radius: 5px;
-    border: 1px solid #707070;
-    resize: vertical;
-}
-
-#submitComment {
-    min-width: 60%;
-    height: 40px;
-    margin: 50px auto;
-    justify-content: center;
-    display: block;
-    color: #fff;
-    background: #095aa5;
-    font-size: 1em;
-    font-weight: bold;
-    margin-top: 30px;
-    outline: none;
-    border: none;
-    border-radius: 5px;
-    transition: .2s ease-in;
-    cursor: pointer;
-}
-
-#submitComment:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-
-#submitComment:hover {
-    background-color: #564bd1;
-}
-
-#errorComment {
-    margin-left: 32vh;
-    z-index: 1000;
-}
-
-.noComments {
-    text-align: center;
-    color: #000000;
-    padding: 20px;
-    font-style: italic;
-}
-
-
 h1 {
     color: #095aa5;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 32px;
-}
-
-#toPost,
-#out {
-    font-size: 26px;
-    margin: 16px 8px;
-}
-
-#newMessage {
-    font-size: 20px;
-    padding-left: 10px;
-    padding-top: 5px;
-    padding-bottom: 2px;
-}
-
-#span-icone {
-    font-size: 26px;
-    margin: 8px;
-}
-
-@media (max-width: 1180px) {
-    #add-post-page {
-        width: 60%;
-    }
-}
-
-@media (max-width: 750px) {
-
-    #span-icone {
-        display: none;
-    }
-
-    i {
-        margin: 16px 16px;
-    }
-
-    #icones-nav {
-        margin: 100px 20px 0;
-    }
 }
 
 #to-post {
@@ -592,6 +198,17 @@ h1 {
     transform: scale(1.1);
 }
 
+#toPost,
+#out {
+    font-size: 26px;
+    margin: 16px 8px;
+}
+
+#span-icone {
+    font-size: 26px;
+    margin: 8px;
+}
+
 #logout {
     cursor: pointer;
     transition: 0.5s;
@@ -601,11 +218,56 @@ h1 {
     transform: scale(1.2);
 }
 
-#span-logout {
-    font-size: 30px;
-    margin: 5px;
+
+#newMessage {
+    font-size: 20px;
+    padding-left: 10px;
+    padding-top: 5px;
+    padding-bottom: 2px;
 }
 
+@media (max-width: 1180px) {
+    #add-post-page {
+        width: 60%;
+    }
+}
+
+@media (max-width: 750px) {
+
+    #span-icone {
+        display: none;
+    }
+
+    i {
+        margin: 16px 16px;
+    }
+
+    #icones-nav {
+        margin: 100px 20px 0;
+    }
+}
+
+/* Home page users sidebar */
+#homePageSidebar {
+    width: 20%;
+    background-color: #f8f9fa;
+    border-left: 1px solid #dee2e6;
+    padding: 15px;
+    margin-top: 130px;
+    margin-bottom: 70px;
+    border-radius: 8px;
+    border: 2px solid #095aa5;
+    overflow-y: auto;
+}
+
+#homePageSidebar h2 {
+    color: #095aa5;
+    font-size: 18px;
+    margin-top: 0;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #dee2e6;
+}
 
 #usersListContainer {
     width: 200px;
@@ -643,10 +305,6 @@ h1 {
     background-color: #f0f0ff;
 }
 
-.user-item.active {
-    background-color: #e0e0ff;
-}
-
 .user-status {
     width: 10px;
     height: 10px;
@@ -655,7 +313,7 @@ h1 {
 }
 
 .online-indicator {
-    background-color: #28a745;
+    background-color: #28a746;
 }
 
 .offline-indicator {
@@ -666,80 +324,7 @@ h1 {
     font-weight: bold;
 }
 
-/* Space between all messages */
-.message-item {
-    margin: 8px 0;
-    /* vertical spacing */
-    max-width: 75%;
-    min-width: 50%;
-    padding: 10px 15px;
-    border-radius: 18px;
-    word-wrap: break-word;
-    display: inline-block;
-}
-
-/* Sender message: right-aligned, blue background, white text */
-.message-item.sent {
-    align-self: flex-end;
-    background-color: #095aa5;
-    color: white;
-    font-weight: bold;
-    border-bottom-right-radius: 5px;
-}
-
-/* Receiver message: left-aligned, light background, blue text */
-.message-item.received {
-    align-self: flex-start;
-    background-color: #f0f0f0;
-    color: #095aa5;
-    font-weight: bold;
-    border-bottom-left-radius: 5px;
-}
-
-.message-content {
-    margin-bottom: 5px;
-}
-
-.message-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    opacity: 0.8;
-}
-
-/* Home page layout */
-.home-content {
-    display: flex;
-    justify-content: space-between;
-    gap: 2rem;
-}
-
-.main-content {
-    flex: 1;
-    min-width: 12rem;
-}
-
-/* Home page users sidebar */
-#homePageSidebar {
-    width: 20%;
-    background-color: #f8f9fa;
-    border-left: 1px solid #dee2e6;
-    padding: 15px;
-    margin-top: 130px;
-    margin-bottom: 70px;
-    border-radius: 8px;
-    border: 2px solid #095aa5;
-    overflow-y: auto;
-}
-
-#homePageSidebar h2 {
-    color: #095aa5;
-    font-size: 18px;
-    margin-top: 0;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #dee2e6;
-}
+/* ----------------------------------------------- */
 
 .users-section h3 {
     font-size: 14px;

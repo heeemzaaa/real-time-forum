@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"html"
 	"log"
 	"net/http"
@@ -23,7 +22,6 @@ var upgrader = websocket.Upgrader{
 // this function handles the websocket logic from connecting to deconnecting
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Println("salaaaam")
 	userID, err := GetSessionUserID(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)

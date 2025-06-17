@@ -1,0 +1,32 @@
+#add-post-page {
+    margin-top: 15vh;
+    margin-bottom: 15vh;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0;
+    width: 40%;
+    min-height: 50%;
+    overflow-y: auto;
+    border-radius: 10px;
+    box-shadow: 5px 20px 50px #000;
+    min-width: 280px;
+}
+
+#choosenCategories {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+}
+
+p {
+    margin-left: 13%;
+}
+
+#submit:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}

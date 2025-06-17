@@ -1,0 +1,106 @@
+#single-post-page {
+    padding-top: 120px;
+    padding-bottom: 30px;
+    width: 90%;
+    margin: 0 auto;
+    max-width: 1400px;
+}
+
+#singlePostContainer {
+    background-color: white;
+    color: #333;
+    border-radius: 8px;
+    border: 2px solid #095aa5;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+    margin-bottom: 30px;
+    box-sizing: border-box;
+}
+
+/* Comments Section Styling */
+#commentsSection {
+    margin-top: 30px;
+}
+
+#commentsSection h2 {
+    color: #095aa5;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.commentCard {
+    background-color: white;
+    border: 1px solid #095aa5;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.commentContent {
+    font-size: 16px;
+}
+
+.commentMeta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #888;
+}
+
+#addCommentForm {
+    margin-top: 15px;
+}
+
+#commentContent {
+    width: 97%;
+    height: 100px;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #707070;
+    resize: vertical;
+}
+
+#submitComment {
+    min-width: 60%;
+    height: 40px;
+    margin: 50px auto;
+    justify-content: center;
+    display: block;
+    color: #fff;
+    background: #095aa5;
+    font-size: 1em;
+    font-weight: bold;
+    margin-top: 30px;
+    outline: none;
+    border: none;
+    border-radius: 5px;
+    transition: .2s ease-in;
+    cursor: pointer;
+}
+
+#submitComment:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+
+#submitComment:hover {
+    background-color: #564bd1;
+}
+
+#errorComment {
+    margin-left: 32vh;
+    z-index: 1000;
+}
+
+.noComments {
+    text-align: center;
+    color: #000000;
+    padding: 20px;
+    font-style: italic;
+}

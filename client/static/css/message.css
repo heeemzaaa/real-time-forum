@@ -1,0 +1,39 @@
+/* Space between all messages */
+.message-item {
+    margin: 8px 0;
+    max-width: 75%;
+    min-width: 50%;
+    padding: 10px 15px;
+    border-radius: 18px;
+    word-wrap: break-word;
+    display: inline-block;
+}
+
+/* Sender message: right-aligned, blue background, white text */
+.message-item.sent {
+    align-self: flex-end;
+    background-color: #095aa5;
+    color: white;
+    font-weight: bold;
+    border-bottom-right-radius: 5px;
+}
+
+/* Receiver message: left-aligned, light background, blue text */
+.message-item.received {
+    align-self: flex-start;
+    background-color: #f0f0f0;
+    color: #095aa5;
+    font-weight: bold;
+    border-bottom-left-radius: 5px;
+}
+
+.message-content {
+    margin-bottom: 5px;
+}
+
+.message-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    opacity: 0.8;
+}
