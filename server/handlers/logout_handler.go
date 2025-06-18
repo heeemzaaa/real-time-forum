@@ -12,15 +12,15 @@ import (
 func HandleLogout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-		// Set CORS headers
-		w.Header().Set("Access-Control-Allow-Origin", "*") // or "http://localhost:3000"
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	// // Set CORS headers
+	// w.Header().Set("Access-Control-Allow-Origin", "*")
+	// w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	// w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-		// Handle preflight
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-		}
+	// // Handle preflight
+	// if r.Method == http.MethodOptions {
+	// 	w.WriteHeader(http.StatusNoContent)
+	// }
 
 	userID, err := GetSessionUserID(r)
 	if err != nil {

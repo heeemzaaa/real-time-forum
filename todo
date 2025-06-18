@@ -1,13 +1,13 @@
-set coockies
-more of websocket
-hashpassword
-a little more about connections
-a little about how to upgrade connections
-migration
-socket.readyState === WebSocket.OPEN
-replace debounce with mine
-scrolling
-time format in js
-insertBefore
-e.target.closest
-why method post on loading
+set coockies ✅
+more of websocket ✅
+hashpassword ✅
+a little more about connections ✅
+a little about how to upgrade connections ✅
+migration ✅
+socket.readyState === WebSocket.OPEN ✅
+scrolling ✅
+time format in js ✅
+insertBefore ✅
+e.target.closest ✅
+debounce ✅
+more about fetch ✅

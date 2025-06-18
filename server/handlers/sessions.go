@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// this function creates a session
+// this function creates a session if it doesn't exist
 func CreateSession(w http.ResponseWriter, userId string, username string) error {
 	var existingSessionID string
 	var expiration time.Time
@@ -29,7 +29,6 @@ func CreateSession(w http.ResponseWriter, userId string, username string) error 
 			Expires:  expiration,
 			HttpOnly: true,
 			Secure:   false,
-			SameSite: http.SameSiteLaxMode,
 		})
 		return nil
 	}
@@ -37,13 +36,22 @@ func CreateSession(w http.ResponseWriter, userId string, username string) error 
 	newSessionID := uuid.New().String()
 	newExpiration := now.Add(24 * time.Hour)
 
-	if err == sql.ErrNoRows {
-		_, err = g.DB.Exec(`INSERT INTO Session (id, user_id, expires_at, username) VALUES (?, ?, ?, ?)`, newSessionID, userId, newExpiration, username)
-	} else {
-		_, err = g.DB.Exec(`UPDATE Session SET id = ?, expires_at = ? WHERE user_id = ?`, newSessionID, newExpiration, userId)
-	}
 	if err != nil {
-		return err
+		if err == sql.ErrNoRows {
+			_, err = g.DB.Exec(`INSERT INTO Session (id, user_id, expires_at, username) VALUES (?, ?, ?, ?)`,
+				newSessionID, userId, newExpiration, username)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	} else {
+		_, err = g.DB.Exec(`UPDATE Session SET id = ?, expires_at = ? WHERE user_id = ?`,
+			newSessionID, newExpiration, userId)
+		if err != nil {
+			return err
+		}
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -53,7 +61,6 @@ func CreateSession(w http.ResponseWriter, userId string, username string) error 
 		Expires:  newExpiration,
 		HttpOnly: true,
 		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
 	})
 
 	return nil

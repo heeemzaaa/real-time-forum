@@ -49,10 +49,10 @@ function connectWebSocket() {
 
             if (
                 (typeof data.sender_id === "string" && data.sender_id.trim() !== "" &&
-                typeof data.receiver_id === "string" && data.receiver_id.trim() !== "" &&
-                typeof data.content === "string" && data.content.trim() !== "") 
+                    typeof data.receiver_id === "string" && data.receiver_id.trim() !== "" &&
+                    typeof data.content === "string" && data.content.trim() !== "")
             ) {
-                
+
                 appendMessageToPopup(data)
 
                 const isForMe = data.receiver_id === currentChatUserId
@@ -209,9 +209,9 @@ function openChatPopup(userId, username) {
                     return
                 }
             })
-            if (permission === false) {
-                return
-            }
+        if (permission === false) {
+            return
+        }
         const textarea = popup.querySelector('textarea')
         const content = textarea.value.trim()
         if (!content || !socket || socket.readyState !== WebSocket.OPEN) return
@@ -221,7 +221,6 @@ function openChatPopup(userId, username) {
             content: content,
             receiver_id: userId,
             sender_id: currentChatUserId,
-            timestamp: new Date().toISOString(),
             seen: false
         }
 
@@ -289,7 +288,7 @@ function loadMoreMessages(userId, container) {
                     const isSender = msg.sender_id === currentChatUserId
                     div.classList.add('message-item', isSender ? 'sent' : 'received')
 
-                    const timestamp = new Date(msg.timestamp || Date.now()).toLocaleTimeString('fr-FR', {
+                    const timestamp = new Date(msg.timestamp || Date.now()).toLocaleTimeString('ar-MA', {
                         hour: '2-digit',
                         minute: '2-digit',
                         hour12: false
@@ -381,7 +380,7 @@ function appendMessageToContainer(container, msg) {
     div.classList.add('message-item')
     div.classList.add(isSender ? 'sent' : 'received')
 
-    const timestamp = new Date(msg.timestamp || Date.now()).toLocaleTimeString('fr-FR', {
+    const timestamp = new Date(msg.timestamp || Date.now()).toLocaleTimeString('ar-MA', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false

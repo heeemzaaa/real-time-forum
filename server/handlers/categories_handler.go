@@ -18,6 +18,12 @@ func HandleCategories(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]any{"status": http.StatusMethodNotAllowed, "message": "Method not allowed"})
+		return
+	}
+
 	rows, err := g.DB.Query("SELECT category_name FROM categories")
 	if err != nil {
 		log.Println("Failed to retrieve categories:", err)

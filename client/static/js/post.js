@@ -19,9 +19,7 @@ let categoriesSlice = []
 
 // this function handles the logic of loading categories
 function loadCategories() {
-    fetch('/api/get-categories', {
-        credentials: 'include'
-    })
+    fetch('/api/get-categories')
         .then(response => response.json())
         .then(data => {
             if (data.status != 200 && data.message) {
@@ -77,6 +75,16 @@ function emptyInputs() {
     document.getElementById('contentError').classList.add('hidden')
 }
 
+// this function will get shown when there is an error in categories added
+function errorCategories(message) {
+    categoryError.textContent = message
+    categoryError.classList.remove('hidden')
+    categoryError.style.color = 'red'
+    setTimeout(() => {
+        categoryError.classList.add('hidden')
+    }, 3000)
+}
+
 // this function handles the logic if all the inputs are valid to proceed to add the post
 function validPost() {
     if (categoryStatus && contentStatus && titleStatus) {
@@ -103,18 +111,22 @@ addCategory.addEventListener('click', function (event) {
     newCategory = custom.value
 
     if (newCategory === "") {
+        errorCategories("Can't add an empty category")
         return
     }
+
+    if (newCategory.length >= 20) {
+        errorCategories("The limit is 20 character per category")
+        return
+    }
+
     for (let i = 0; i < categoriesSlice.length; i++) {
         if (newCategory === categoriesSlice[i]) {
-            categoryError.classList.remove('hidden')
-            categoryError.style.color = 'red'
-            setTimeout(() => {
-                categoryError.classList.add('hidden')
-            }, 3000)
+            errorCategories("This category already exist")
             return
         }
     }
+    
     categoriesSlice.push(newCategory)
     categoryError.classList.add('hidden')
     let option = document.createElement('option')

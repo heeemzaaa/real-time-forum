@@ -7,10 +7,7 @@ import (
 )
 
 func Migrate() {
-	filePath := os.Getenv("MODULES_SQL_PATH")
-	if filePath == "" {
-		filePath = "./server/database/modules.sql"
-	}
+	filePath := "server/database/modules.sql"
 
 	query, err := os.ReadFile(filePath)
 	if err != nil {

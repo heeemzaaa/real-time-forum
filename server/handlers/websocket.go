@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"html"
 	"log"
 	"net/http"
@@ -66,9 +67,10 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		g.ActiveConnections[userID] = []*g.Connection{connection}
 	}
 	g.ActiveConnectionsMutex.Unlock()
-
+	
+	fmt.Println("logged")
 	BroadcastUserStatus(userID)
-	log.Println("Logged again")
+
 	defer func() {
 		log.Printf("Cleaning up connection for user %s", userName)
 		conn.Close()
@@ -232,7 +234,11 @@ func BroadcastUserStatus(initiatorID string) {
 
 		for rows.Next() {
 			var otherUserID, lastTime string
-			rows.Scan(&otherUserID, &lastTime)
+			err = rows.Scan(&otherUserID, &lastTime)
+			if err != nil {
+				log.Println("Error scanning lastMessages row for", userID, ":", err)
+				continue
+			}
 			lastMessages[otherUserID] = lastTime
 		}
 		rows.Close()
@@ -240,7 +246,7 @@ func BroadcastUserStatus(initiatorID string) {
 		lastMessageSeen := make(map[string]bool)
 
 		for otherUserID := range lastMessages {
-			var lastMessage string
+			var lastMessageID string
 			var senderID string
 			var seen bool
 
@@ -249,7 +255,7 @@ func BroadcastUserStatus(initiatorID string) {
 				WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
 				ORDER BY sent_at DESC
 				LIMIT 1
-				`, userID, otherUserID, otherUserID, userID).Scan(&lastMessage, &senderID, &seen)
+				`, userID, otherUserID, otherUserID, userID).Scan(&lastMessageID, &senderID, &seen)
 			if err != nil {
 				log.Println("Error querying last message between", userID, "and", otherUserID, ":", err)
 				continue
@@ -260,20 +266,20 @@ func BroadcastUserStatus(initiatorID string) {
 		}
 
 		update := struct {
-			Type         string            `json:"type"`
-			OnlineUsers  map[string]bool   `json:"onlineUsers"`
-			AllUsers     map[string]string `json:"allUsers"`
-			LastMessages map[string]string `json:"lastMessages"`
-			LastMessage  map[string]bool   `json:"lastMessageSeen"`
+			Type            string            `json:"type"`
+			OnlineUsers     map[string]bool   `json:"onlineUsers"`
+			AllUsers        map[string]string `json:"allUsers"`
+			LastMessages    map[string]string `json:"lastMessages"`
+			LastMessageSeen map[string]bool   `json:"lastMessageSeen"`
 		}{
-			Type:         "new_connection",
-			OnlineUsers:  onlineUsers,
-			AllUsers:     allUsers,
-			LastMessages: lastMessages,
-			LastMessage:  lastMessageSeen,
+			Type:            "new_connection",
+			OnlineUsers:     onlineUsers,
+			AllUsers:        allUsers,
+			LastMessages:    lastMessages,
+			LastMessageSeen: lastMessageSeen,
 		}
 
-		status, err := json.Marshal(update)
+		jsonUpdate, err := json.Marshal(update)
 		if err != nil {
 			log.Println("Error marshaling user status update:", err)
 			continue
@@ -281,7 +287,7 @@ func BroadcastUserStatus(initiatorID string) {
 
 		for _, conn := range connections {
 			conn.WriteMu.Lock()
-			err = conn.Conn.WriteMessage(websocket.TextMessage, status)
+			err = conn.Conn.WriteMessage(websocket.TextMessage, jsonUpdate)
 			conn.WriteMu.Unlock()
 			if err != nil {
 				log.Println("Error writing user status update to", userID, ":", err)

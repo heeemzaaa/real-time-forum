@@ -22,9 +22,7 @@ function initializePage() {
 
 // this function check the sessions of the users if its valid or no
 function checkSession() {
-  fetch('/api/check-session', {
-    credentials: 'include',
-  })
+  fetch('/api/check-session')
     .then(response => response.json())
     .then(result => {
       if (result.status === 200 && result.message === "ok") {
