@@ -12,16 +12,6 @@ import (
 func HandleLogout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// // Set CORS headers
-	// w.Header().Set("Access-Control-Allow-Origin", "*")
-	// w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-	// w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	// // Handle preflight
-	// if r.Method == http.MethodOptions {
-	// 	w.WriteHeader(http.StatusNoContent)
-	// }
-
 	userID, err := GetSessionUserID(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -46,7 +36,6 @@ func HandleLogout(w http.ResponseWriter, r *http.Request) {
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 	})
-
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "Session deleted successfully!"})
 }

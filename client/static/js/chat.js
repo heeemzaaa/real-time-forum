@@ -174,7 +174,7 @@ function openChatPopup(userId, username) {
         </div>
         <div class="chat-popup-body"></div>
         <div class="chat-popup-footer">
-            <textarea placeholder="Type a message..."></textarea>
+            <textarea placeholder="Type a message..." id="textArea"></textarea>
             <i class="fa-solid fa-paper-plane send-popup-icon"></i>
         </div>
     `

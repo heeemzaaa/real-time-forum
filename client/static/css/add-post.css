@@ -29,3 +29,14 @@ p {
     transform: none;
     box-shadow: none;
 }
+
+@media only screen and (max-width: 425px) {
+        #add-post-page {
+        margin: 0;
+        margin-top: 50px;
+        padding: 0;
+        box-shadow: none;
+        border-radius: 0;
+        max-width: 100%;
+    }
+}
