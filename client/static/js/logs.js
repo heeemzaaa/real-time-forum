@@ -80,7 +80,7 @@ const login = {
     },
 }
 
-function signUp() {
+async function signUp() {
     const user = {
         Username: signup.username.input.value,
         Email: signup.email.input.value,
@@ -90,39 +90,37 @@ function signUp() {
         LastName: signup.lastname.input.value,
         PasswordHash: signup.password.input.value
     }
-
-    fetch('api/signup', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(user)
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 409) {
-                Toast('Email or username already used ❌')
-            } else if (data.status === 400) {
-                errorPage(data.status, data.message)
-                showPage('ErrorPage')
-            } else if (data.status === 405) {
-                errorPage(data.status, "Method Not Allowed")
-                showPage('ErrorPage')
-            } else if (data.status === 500) {
-                errorPage(data.status, "Server error, please try again later.")
-                showPage('ErrorPage')
-            } else if (data.status === 200 && data.message === "User created") {
-                Toast('Welcome to our forum ✅')
-                showPage('home-page')
-            }
-
+    try {
+        const response = await fetch('api/signup', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(user)
         })
-        .catch((error) => {
-            errorPage(500, "Network error or server is down. Try again later.")
+        const data = await response.json()
+
+        if (data.status === 409) {
+            Toast('Email or username already used ❌')
+        } else if (data.status === 400) {
+            errorPage(data.status, data.message)
             showPage('ErrorPage')
-            console.error(error)
+        } else if (data.status === 405) {
+            errorPage(data.status, "Method Not Allowed")
+            showPage('ErrorPage')
+        } else if (data.status === 500) {
+            errorPage(data.status, "Server error, please try again later.")
+            showPage('ErrorPage')
+        } else if (data.status === 200 && data.message === "User created") {
+            Toast('Welcome to our forum ✅')
+            showPage('home-page')
+        }
 
-        })
+    } catch (error) {
+        errorPage(500, "Network error or server is down. Try again later.")
+        showPage('ErrorPage')
+        console.error(error)
+    }
 }
 
 // Listeners
@@ -135,137 +133,93 @@ signup.lastname.input.addEventListener("input", () => test(signup.lastname, sign
 signup.password.input.addEventListener("input", () => test(signup.password, signup))
 signup.button.addEventListener('click', (event) => {
     event.preventDefault()
-
     signUp()
     emptyLogsInputs()
 })
 
-function logIn() {
+async function logIn() {
     const user = {
         UsernameOrEmail: login.emailusername.input.value,
         Password: login.password.input.value
     }
-
-    fetch('api/login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(user)
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 401 && data.message === "Username or Email not found !") {
-                Toast('Username or Email not found ❌')
-            } else if (data.status === 401 && data.message === "Password not correct!") {
-                Toast('Password not correct ❌')
-            } else if (data.status === 405) {
-                errorPage(data.status, "Method Not Allowed")
-                showPage('ErrorPage')
-            } else if (data.status === 500) {
-                errorPage(data.status, "Server error, please try again later.")
-                showPage('ErrorPage')
-            } else if (data.status === 200 && data.message === "Login successful!") {
-                Toast('Welcome back ✅')
-                showPage('home-page')
-            }
-
+    try {
+        const response = await fetch('api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(user)
         })
-        .catch((error) => {
-            console.error(error)
-            errorPage(500, "Network error or server is down. Try again later.")
+        const data = await response.json();
+
+        if (data.status === 401 && data.message === "Username or Email not found !") {
+            Toast('Username or Email not found ❌')
+        } else if (data.status === 401 && data.message === "Password not correct!") {
+            Toast('Password not correct ❌')
+        } else if (data.status === 405) {
+            errorPage(data.status, "Method Not Allowed")
             showPage('ErrorPage')
+        } else if (data.status === 500) {
+            errorPage(data.status, "Server error, please try again later.")
+            showPage('ErrorPage')
+        } else if (data.status === 200 && data.message === "Login successful!") {
+            Toast('Welcome back ✅')
+            showPage('home-page')
+        }
 
-        })
+    } catch (error) {
+        console.error(error)
+        errorPage(500, "Network error or server is down. Try again later.")
+        showPage('ErrorPage')
+    }
 }
 
 login.emailusername.input.addEventListener('input', () => test(login.emailusername, login));
 login.password.input.addEventListener("input", () => test(login.password, login));
 login.button.addEventListener('click', (event) => {
     event.preventDefault()
-
     logIn()
     emptyLogsInputs()
 });
 
-function logOut() {
-    fetch('/api/logout', {
-        credentials: 'include'
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 500) {
-                errorPage(data.status, "Failed to log out. Try again.")
-                showPage('ErrorPage')
-            } else if (data.status === 401) {
-                showPage('register-login-page')
-            } else if (data.status === 200 && data.message === "Session deleted successfully!") {
-                Toast("See you soon 👋🏼")
-                showPage('register-login-page')
-            }
+async function logOut() {
+    try {
+        const response = await fetch('/api/logout', {
+            credentials: 'include'
         })
-        .catch((error) => {
-            console.error(error)
-            errorPage(500, "Network error or server is down. Try again later.")
+        const data = await response.json()
+
+        if (data.status === 500) {
+            errorPage(data.status, "Failed to log out. Try again.")
             showPage('ErrorPage')
+        } else if (data.status === 401) {
+            showPage('register-login-page')
+        } else if (data.status === 200 && data.message === "Session deleted successfully!") {
+            Toast("See you soon 👋🏼")
+            showPage('register-login-page')
+        }
 
-        })
-}
-
-document.getElementById('logout').addEventListener('click', () => {
-    logOut()
-})
-
-// utils
-function test(obj, method) {
-    if (obj.rgx.test(obj.input.value) || obj.rgx2?.test(obj.input.value)) {
-        obj.status = true
-        obj.error.classList.add('hidden')
-    } else {
-        obj.status = false
-        obj.error.classList.remove('hidden')
-        obj.error.style.color = 'red'
+    } catch (error) {
+        console.error(error)
+        errorPage(500, "Network error or server is down. Try again later.")
+        showPage('ErrorPage')
     }
-    method.check()
 }
+
+document.getElementById('logout').addEventListener('click', () => logOut());
 
 function emptyLogsInputs() {
-    signup.username.input.value = ""
-    signup.email.input.value = ""
-    signup.age.input.value = ""
-    signup.gender.input.value = ""
-    signup.firstname.input.value = ""
-    signup.lastname.input.value = ""
-    signup.password.input.value = ""
+    for (const key of Object.keys(signup)) {
+        if (!signup[key].input || !signup[key].error) continue
+        signup[key].input.value = "";
+        signup[key].error.classList.add("hidden");
+        signup[key].status = false;
+    }
 
-    signup.username.status = false
-    signup.username.error.classList.add("hidden")
-    signup.email.status = false
-
-    signup.email.error.classList.add("hidden")
-    signup.age.status = false
-
-    signup.age.error.classList.add("hidden")
-    signup.gender.status = false
-
-    signup.gender.error.classList.add("hidden")
-    signup.firstname.status = false
-
-    signup.firstname.error.classList.add("hidden")
-    signup.lastname.status = false
-
-    signup.lastname.error.classList.add("hidden")
-    signup.password.status = false
-
-    signup.password.error.classList.add("hidden")
-
-    login.emailusername.input.value = ""
-    login.password.input.value = ""
-
-    login.emailusername.status = false
-
-    login.emailusername.error.classList.add("hidden")
-    login.password.status = false
-
-    login.password.error.classList.add("hidden")
+    for (const key of Object.keys(login)) {
+        if (!login[key].input || !login[key].error) continue
+        login[key].input.value = "";
+        login[key].error.classList.add("hidden");
+        login[key].status = false;
+    }
 }

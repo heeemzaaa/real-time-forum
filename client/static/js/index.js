@@ -9,38 +9,35 @@ const selectCategories = document.getElementById('categories');
 
 // Initialize page
 function initializePage() {
-  pages.forEach(id => {
-    document.getElementById(id).style.display = 'none';
-  });
+  pages.forEach(id => document.getElementById(id).style.display = 'none');
   navbar.style.display = 'none';
 
-  toPostButton.addEventListener('click', () => {
-    showPage('add-post-page')
-  })
+  toPostButton.addEventListener('click', () => showPage('add-post-page'));
 }
 
 
 // this function check the sessions of the users if its valid or no
-function checkSession() {
-  fetch('/api/check-session')
-    .then(response => response.json())
-    .then(result => {
-      if (result.status === 200 && result.message === "ok") {
-        showPage('home-page')
-      } else if (result.status === 401) {
-        closePopup()
-        showPage('register-login-page')
-      } else {
-        closePopup()
-        errorPage(result.status || 500, result.message || "Unexpected error");
-        showPage('ErrorPage');
-      }
-    })
-    .catch(err => {
-      console.error("Session check failed:", err)
-      errorPage(500, "Failed to verify session. Try again later.");
+async function checkSession() {
+  try {
+    const response = await fetch('/api/check-session')
+    const result = await response.json()
+    
+    if (result.status === 200 && result.message === "ok") {
+      showPage('home-page')
+    } else if (result.status === 401) {
+      closePopup()
+      showPage('register-login-page')
+    } else {
+      closePopup()
+      errorPage(result.status || 500, result.message || "Unexpected error");
       showPage('ErrorPage');
-    });
+    }
+
+  } catch(error) {
+    console.error("Session check failed:", error)
+    errorPage(500, "Failed to verify session. Try again later.");
+    showPage('ErrorPage');
+  }
 }
 
 // Session check on page load is the first thing we have to do
@@ -53,15 +50,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // this function handles the logic of the page that we should show to the user
 function showPage(pageId) {
-  let doNotConnect = (pageId === 'register-login-page' || pageId === 'ErrorPage')
+  let doNotConnect = (pageId === 'register-login-page' || pageId === 'ErrorPage');
 
-  pages.forEach(id => {
-    document.getElementById(id).style.display = (id === pageId) ? 'block' : 'none'
-  })
+  pages.forEach(id => document.getElementById(id).style.display = (id === pageId) ? 'block' : 'none');
 
-  if (!doNotConnect) {
-    connectWebSocket()
-  }
+  if (!doNotConnect) connectWebSocket();
 
   navbar.style.display = (pageId === 'register-login-page' || pageId === 'ErrorPage') ? 'none' : 'flex'
   toPostButton.style.display = (pageId === 'add-post-page' || pageId === 'register-login-page' || pageId === 'ErrorPage') ? 'none' : 'flex'
@@ -78,44 +71,44 @@ function showPage(pageId) {
 }
 
 // this functions load the post to the home page, handles the case of no posts , and the case of posts
-function loadPosts() {
-  fetch('/api/get-posts')
-    .then(response => response.json())
-    .then(data => {
-      if (data.status != 200 && data.message) {
-        if (data.status == 401) {
-          closePopup()
-          showPage('register-login-page')
-          Toast('You must login to see posts')
-          return
-        }
-
-        errorPage(data.status, data.message)
-        showPage('ErrorPage')
+async function loadPosts() {
+  try {
+    const response = await fetch('/api/get-posts')
+    const data = await response.json()
+    
+    if (data.status != 200 && data.message) {
+      if (data.status == 401) {
+        closePopup()
+        showPage('register-login-page')
+        Toast('You must login to see posts')
         return
       }
 
-      if (data.status == 200 && data.message == "There is no posts") {
-        postsContainer.innerHTML = ""
-        displayNoPosts()
-        return
-      }
-
-      if (!Array.isArray(data)) {
-        errorPage(500, "Unexpected data format while loading posts.")
-        showPage('ErrorPage')
-        return
-      }
-
-
-      postsContainer.innerHTML = ""
-      renderPosts(data)
-    })
-    .catch(error => {
-      console.error("Failed to load posts", error)
-      errorPage(500, "Failed to connect to the server. Please try again later.")
+      errorPage(data.status, data.message)
       showPage('ErrorPage')
-    })
+      return
+    }
+
+    if (data.status == 200 && data.message == "There is no posts") {
+      postsContainer.innerHTML = ""
+      displayNoPosts()
+      return
+    }
+
+    if (!Array.isArray(data)) {
+      errorPage(500, "Unexpected data format while loading posts.")
+      showPage('ErrorPage')
+      return
+    }
+
+    postsContainer.innerHTML = ""
+    renderPosts(data)
+
+  } catch(error) {
+    console.error("Failed to load posts", error)
+    errorPage(500, "Failed to connect to the server. Please try again later.")
+    showPage('ErrorPage')
+  }
 }
 
 // case of no posts , that what we show to the user
@@ -127,7 +120,6 @@ function displayNoPosts() {
   noPosts.textContent = 'No posts found.'
   postsContainer.appendChild(noPosts)
 }
-
 
 // case of posts finded , this function handles the logic of it
 function renderPosts(posts) {
@@ -153,13 +145,4 @@ function renderPosts(posts) {
 
     postsContainer.append(postCard);
   });
-}
-
-// create fields of posts and comments
-function createField(valueText) {
-  const field = document.createElement('div')
-  const value = document.createElement('span')
-  value.textContent = valueText
-  field.append(value)
-  return field
 }

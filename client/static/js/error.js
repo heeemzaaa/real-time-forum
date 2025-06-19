@@ -1,7 +1,8 @@
+const ErrorPage = document.getElementById('ErrorPage');
+
 // this function handles the error page error
 function errorPage(status, message) {
-    const ErrorPage = document.getElementById('ErrorPage')
-    ErrorPage.innerHTML = ''
+    ErrorPage.innerHTML = '';
 
     let errorHeader = document.createElement('h1')
     errorHeader.id = 'errorHeader'

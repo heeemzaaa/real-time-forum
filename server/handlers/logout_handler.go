@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	g "real-time-forum/server/globalVar"
 	"time"
+
+	g "real-time-forum/server/globalVar"
 )
 
 // this function handles all the logout logic, clears the session from the table...
@@ -34,8 +35,8 @@ func HandleLogout(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
 		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
 	})
+	
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]any{"status": http.StatusOK, "message": "Session deleted successfully!"})
 }

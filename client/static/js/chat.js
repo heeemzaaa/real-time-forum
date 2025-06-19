@@ -96,6 +96,7 @@ function connectWebSocket() {
     })
 }
 
+
 // this function closes the popup
 function closePopup() {
     const existingPopup = document.querySelector('.chat-popup')
@@ -209,9 +210,9 @@ function openChatPopup(userId, username) {
                     return
                 }
             })
-        if (permission === false) {
-            return
-        }
+
+        if (permission === false) return
+
         const textarea = popup.querySelector('textarea')
         const content = textarea.value.trim()
         if (!content || !socket || socket.readyState !== WebSocket.OPEN) return
@@ -232,23 +233,10 @@ function openChatPopup(userId, username) {
     loadMessages(userId, popup.querySelector('.chat-popup-body'), 0, 10)
     const chatBody = popup.querySelector('.chat-popup-body')
     chatBody.addEventListener('scroll', debounce(() => {
-        if (chatBody.scrollTop === 0) {
-            loadMoreMessages(userId, chatBody)
-        }
+        if (chatBody.scrollTop === 0) loadMoreMessages(userId, chatBody)
     }, 500))
 
 }
-
-
-// this function does the debounce logic
-function debounce(func, delay) {
-    let timer
-    return function (...args) {
-        clearTimeout(timer)
-        timer = setTimeout(() => func.apply(this, args), delay)
-    }
-}
-
 
 // this function load messages after the first scroll up
 function loadMoreMessages(userId, container) {

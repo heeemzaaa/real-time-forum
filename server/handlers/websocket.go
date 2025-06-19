@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"html"
 	"log"
 	"net/http"
@@ -52,7 +51,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error upgrading the connection:", err)
 		return
 	}
-
 	connection := &g.Connection{
 		Conn:     conn,
 		UserID:   userID,
@@ -67,14 +65,13 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		g.ActiveConnections[userID] = []*g.Connection{connection}
 	}
 	g.ActiveConnectionsMutex.Unlock()
-	
-	fmt.Println("logged")
+
 	BroadcastUserStatus(userID)
 
 	defer func() {
 		log.Printf("Cleaning up connection for user %s", userName)
 		conn.Close()
-		DeleteConnection(userID, conn)
+		DeleteConnection(userID, conn, "offline")
 		BroadcastUserStatus(userID)
 	}()
 
@@ -92,9 +89,8 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if message.Type == "offline" {
-			BroadcastUserStatus(userID)
 			return
-		}
+		} 
 
 		if message.Type == "seen-update" {
 			_, err = g.DB.Exec(`UPDATE Messages SET seen = 1 WHERE sender_id = ? AND receiver_id = ? AND seen = 0`, message.SenderID, message.ReceiverID)
@@ -297,11 +293,43 @@ func BroadcastUserStatus(initiatorID string) {
 }
 
 // this function deletes the connections
-func DeleteConnection(userID string, conn *websocket.Conn) {
+func DeleteConnection(userID string, conn *websocket.Conn, typeReceived string) {
 	g.ActiveConnectionsMutex.Lock()
 	defer g.ActiveConnectionsMutex.Unlock()
 
-	delete(g.ActiveConnections, userID)
+	if typeReceived == "offline" {
+		delete(g.ActiveConnections, userID)
+	} else {
+		log.Println("hnaa")
+		connections, exist := g.ActiveConnections[userID]
+		if !exist {
+			return
+		}
+
+		index := -1
+		for i, c := range connections {
+			if c.Conn == conn {
+				index = i
+				break
+			}
+		}
+
+		if index >= 0 {
+			newConnections := make([]*g.Connection, 0, len(connections)-1)
+			for i, c := range connections {
+				if i != index {
+					newConnections = append(newConnections, c)
+				}
+			}
+			connections = newConnections
+		}
+
+		if len(connections) == 0 {
+			delete(g.ActiveConnections, userID)
+		} else {
+			g.ActiveConnections[userID] = connections
+		}
+	}
 }
 
 // Get messages between current user and the specified user
