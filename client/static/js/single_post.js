@@ -133,6 +133,10 @@ function loadComments(postId) {
 // this function handles the case of adding a new comment
 function submitComment(postId) {
     const content = document.getElementById('commentContent').value.trim()
+    if (content.length < 3 || content.length > 200) {
+        Toast('Cannot add this comments , it has to be between 3 and 200 character ❌')
+        return
+    }
     const options = {
         method: 'POST',
         headers: {
@@ -143,11 +147,6 @@ function submitComment(postId) {
             content: content
         }),
         credentials: 'include'
-    }
-
-    if (!content) {
-        Toast("Comment cannot be empty")
-        return
     }
 
     fetch('/api/add-comment', options)

@@ -21,6 +21,8 @@ var upgrader = websocket.Upgrader{
 
 // this function handles the websocket logic from connecting to deconnecting
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	var typeReceived string
+
 	w.Header().Set("Content-Type", "application/json")
 	userID, err := GetSessionUserID(r)
 	if err != nil {
@@ -71,7 +73,12 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		log.Printf("Cleaning up connection for user %s", userName)
 		conn.Close()
-		DeleteConnection(userID, conn, "offline")
+		log.Println(typeReceived)
+		if typeReceived == "offline" {
+			DeleteConnection(userID, conn, "offline")
+		} else {
+			DeleteConnection(userID, conn, "tab closed")
+		}
 		BroadcastUserStatus(userID)
 	}()
 
@@ -89,8 +96,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if message.Type == "offline" {
+			typeReceived = message.Type
 			return
-		} 
+		}
 
 		if message.Type == "seen-update" {
 			_, err = g.DB.Exec(`UPDATE Messages SET seen = 1 WHERE sender_id = ? AND receiver_id = ? AND seen = 0`, message.SenderID, message.ReceiverID)
@@ -298,39 +306,39 @@ func DeleteConnection(userID string, conn *websocket.Conn, typeReceived string) 
 	defer g.ActiveConnectionsMutex.Unlock()
 
 	if typeReceived == "offline" {
+		log.Println("hnaaaaa")
 		delete(g.ActiveConnections, userID)
-	} else {
-		log.Println("hnaa")
-		connections, exist := g.ActiveConnections[userID]
-		if !exist {
-			return
-		}
+		return
+	}
 
-		index := -1
-		for i, c := range connections {
-			if c.Conn == conn {
-				index = i
-				break
-			}
-		}
+	connections, exist := g.ActiveConnections[userID]
+	if !exist {
+		log.Printf("No active connections found for user %s", userID)
+		return
+	}
 
-		if index >= 0 {
-			newConnections := make([]*g.Connection, 0, len(connections)-1)
-			for i, c := range connections {
-				if i != index {
-					newConnections = append(newConnections, c)
-				}
-			}
-			connections = newConnections
-		}
-
-		if len(connections) == 0 {
-			delete(g.ActiveConnections, userID)
-		} else {
-			g.ActiveConnections[userID] = connections
+	index := -1
+	for i, c := range connections {
+		if c.Conn == conn {
+			index = i
+			break
 		}
 	}
+
+	if index == -1 {
+		log.Printf("Connection not found for user %s", userID)
+		return
+	}
+
+	connections = append(connections[:index], connections[index+1:]...)
+
+	if len(connections) == 0 {
+		delete(g.ActiveConnections, userID)
+	} else {
+		g.ActiveConnections[userID] = connections
+	}
 }
+
 
 // Get messages between current user and the specified user
 func HandleGetMessages(w http.ResponseWriter, r *http.Request) {

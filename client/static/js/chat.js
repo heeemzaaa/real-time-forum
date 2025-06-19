@@ -86,12 +86,12 @@ function connectWebSocket() {
     }
 
     document.getElementById('logout').addEventListener('click', () => {
+        socket.send(JSON.stringify({ type: "offline" }))
+        closePopup()
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.close(1000, "User logged out")
             showPage('register-login-page')
         }
-        socket.send(JSON.stringify({ type: "offline" }))
-        closePopup()
         return
     })
 }
@@ -215,7 +215,12 @@ function openChatPopup(userId, username) {
 
         const textarea = popup.querySelector('textarea')
         const content = textarea.value.trim()
-        if (!content || !socket || socket.readyState !== WebSocket.OPEN) return
+        if (!content || !socket || socket.readyState !== WebSocket.OPEN || content.length > 500) {
+            if (content.length > 500) {
+                Toast('this message is too long , the limit is 500')
+            }
+            return
+        } 
 
         const messageObj = {
             type: "new-message",

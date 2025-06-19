@@ -6,7 +6,7 @@ const signup = {
         status: false
     },
     email: {
-        rgx: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+        rgx: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,5}$/,
         input: document.getElementById('email'),
         error: document.getElementById('emailError'),
         status: false
@@ -55,7 +55,7 @@ const signup = {
 
 const login = {
     emailusername: {
-        rgx: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+        rgx: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,5}$/,
         rgx2: /^[a-zA-Z0-9_-]{3,16}$/,
         input: document.getElementById('emailNickname'),
         error: document.getElementById('emailNicknameError'),

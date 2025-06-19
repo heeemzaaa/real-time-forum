@@ -10,6 +10,7 @@ function Toast(message) {
     }, 4000);
 }
 
+// this is the debounce function used in the scroll
 function debounce(func, delay) {
     let timer
     return function (...args) {

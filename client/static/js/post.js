@@ -212,14 +212,14 @@ function addPost() {
             else if (data.status === 401) {
                 closePopup()
                 showPage('register-login-page')
-                Toast("You have to login to add a post !")
+                Toast("You have to login to add a post ! ❌")
             }
             else if (data.status === 405) {
-                errorPage(data.status, "Method not allowed.")
+                errorPage(data.status, "Method not allowed. ❌")
                 showPage('ErrorPage')
             }
             else if (data.status === 500) {
-                errorPage(data.status, data.message || "Something went wrong while creating the post.")
+                errorPage(data.status, data.message || "Something went wrong while creating the post. ❌")
                 showPage('ErrorPage')
             }
             else {
