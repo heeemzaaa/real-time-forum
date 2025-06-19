@@ -191,6 +191,24 @@ function openChatPopup(userId, username) {
     }
     socket.send(JSON.stringify(seenUpdate))
 
+    const popupOpen = document.getElementById(`chat-popup-${userId}`)
+    if (popupOpen) {
+        let timerId
+        let typing = false
+        popup.querySelector('#textArea').addEventListener('input', () => {
+            if(!typing) {
+                typing = true
+                socket.send(JSON.stringify({type: "typing" , isTyping: typing , sender_id: currentChatUserId, receiver_id: userId}))
+            } 
+
+                clearTimeout(timerId)
+                timerId = setTimeout(() => {
+                    typing = false
+                    socket.send(JSON.stringify({type: "typing" , isTyping: typing, sender_id: currentChatUserId, receiver_id: userId}))
+                },2000)
+        
+        })
+    }
 
     popup.querySelector('.send-popup-icon').addEventListener('click', async () => {
         let permission = false
@@ -220,7 +238,7 @@ function openChatPopup(userId, username) {
                 Toast('this message is too long , the limit is 500')
             }
             return
-        } 
+        }
 
         const messageObj = {
             type: "new-message",

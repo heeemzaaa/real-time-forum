@@ -64,6 +64,7 @@ type ChatMessage struct {
 	ReceiverID string    `json:"receiver_id"`
 	Content    string    `json:"content"`
 	Seen       bool      `json:"seen"`
+	Typing     bool      `json:"isTyping"`
 	Timestamp  time.Time `json:"timestamp"`
 }
 

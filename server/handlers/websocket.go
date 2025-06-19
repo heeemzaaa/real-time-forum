@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"html"
 	"log"
 	"net/http"
@@ -73,7 +74,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		log.Printf("Cleaning up connection for user %s", userName)
 		conn.Close()
-		log.Println(typeReceived)
 		if typeReceived == "offline" {
 			DeleteConnection(userID, conn, "offline")
 		} else {
@@ -94,7 +94,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-
+		if message.Type == "typing" {
+			fmt.Println(message)
+		}
 		if message.Type == "offline" {
 			typeReceived = message.Type
 			return
@@ -268,7 +270,7 @@ func BroadcastUserStatus(initiatorID string) {
 				lastMessageSeen[senderID] = seen
 			}
 		}
-
+		
 		update := struct {
 			Type            string            `json:"type"`
 			OnlineUsers     map[string]bool   `json:"onlineUsers"`
