@@ -3,6 +3,7 @@ let currentChatUserId = ""
 let socket = null
 let isOpen = false
 let denyConnection = false
+let counter = 0
 
 // this function connects handles the connection between the frontend and the backend
 function connectWebSocket() {
@@ -29,6 +30,8 @@ function connectWebSocket() {
                 const { onlineUsers, allUsers } = data
                 const lastMessages = data.lastMessages || {}
                 const lastMessageSeen = data.lastMessageSeen || {}
+                const typingUser = data.typingUser || {}
+
 
                 try {
                     const response = await fetch('/api/check-session', { credentials: 'include' })
@@ -36,7 +39,7 @@ function connectWebSocket() {
 
                     if (result.message === "ok") {
                         currentChatUserId = result.userID
-                        loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen)
+                        loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen, typingUser)
                     } else if (result.status === 401) {
                         handleUnauthorized()
                     }
@@ -52,9 +55,8 @@ function connectWebSocket() {
                     typeof data.receiver_id === "string" && data.receiver_id.trim() !== "" &&
                     typeof data.content === "string" && data.content.trim() !== "")
             ) {
-
                 appendMessageToPopup(data)
-
+                counter++
                 const isForMe = data.receiver_id === currentChatUserId
                 const popupOpen = document.getElementById(`chat-popup-${data.sender_id}`)
 
@@ -114,7 +116,7 @@ function handleUnauthorized() {
 
 
 // this function serves the list of users with their status, if online or offline
-function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageSeen) {
+function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageSeen, typingUser) {
     userList.innerHTML = ''
 
     let userEntries = Object.entries(users).filter(([id]) => id !== currentUserId)
@@ -139,10 +141,12 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageS
         userStatus.classList.add('user-item')
         userStatus.setAttribute('data-user-id', userID)
         userStatus.classList.add(onlineUsers[userID] ? 'online' : 'offline')
+        console.log(typingUser)
         userStatus.innerHTML = `
         <div class="user-status ${onlineUsers[userID] ? 'online-indicator' : 'offline-indicator'}"></div>
         <div class="user-name">${username}</div>
         <div class="messages">${(lastMessageSeen[userID] == false) ? '<i class="fa-solid fa-message" id="newMessage"></i>' : ''}
+        <div class="typing">${(typingUser[userID] === true) ? "typing..." : ""}
         `
         userList.appendChild(userStatus)
     }
@@ -196,17 +200,17 @@ function openChatPopup(userId, username) {
         let timerId
         let typing = false
         popup.querySelector('#textArea').addEventListener('input', () => {
-            if(!typing) {
+            if (!typing) {
                 typing = true
-                socket.send(JSON.stringify({type: "typing" , isTyping: typing , sender_id: currentChatUserId, receiver_id: userId}))
-            } 
+                socket.send(JSON.stringify({ type: "typing", isTyping: typing, sender_id: currentChatUserId, receiver_id: userId }))
+            }
 
-                clearTimeout(timerId)
-                timerId = setTimeout(() => {
-                    typing = false
-                    socket.send(JSON.stringify({type: "typing" , isTyping: typing, sender_id: currentChatUserId, receiver_id: userId}))
-                },2000)
-        
+            clearTimeout(timerId)
+            timerId = setTimeout(() => {
+                typing = false
+                socket.send(JSON.stringify({ type: "typing", isTyping: typing, sender_id: currentChatUserId, receiver_id: userId }))
+            }, 1000)
+
         })
     }
 
@@ -270,7 +274,7 @@ function loadMoreMessages(userId, container) {
         credentials: 'include',
         body: JSON.stringify({
             user_id: userId,
-            offset: offset,
+            offset: offset + counter,
             limit: 10
         })
     }

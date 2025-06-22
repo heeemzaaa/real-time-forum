@@ -101,6 +101,11 @@
     opacity: 0.8;
 }
 
+.typing {
+    font-size: small;
+    margin-left: 5px;
+}
+
 @media only screen and (max-width: 425px) {
     .chat-popup {
         position: fixed;

@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"html"
 	"log"
 	"net/http"
@@ -19,6 +18,7 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
+var typingUser = make(map[string]bool)
 
 // this function handles the websocket logic from connecting to deconnecting
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -95,8 +95,11 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if message.Type == "typing" {
-			fmt.Println(message)
+			typingUser[userID] = message.Typing
+			BroadcastUserStatus(userID)
+			continue
 		}
+
 		if message.Type == "offline" {
 			typeReceived = message.Type
 			return
@@ -270,19 +273,21 @@ func BroadcastUserStatus(initiatorID string) {
 				lastMessageSeen[senderID] = seen
 			}
 		}
-		
+
 		update := struct {
 			Type            string            `json:"type"`
 			OnlineUsers     map[string]bool   `json:"onlineUsers"`
 			AllUsers        map[string]string `json:"allUsers"`
 			LastMessages    map[string]string `json:"lastMessages"`
 			LastMessageSeen map[string]bool   `json:"lastMessageSeen"`
+			TypingUser      map[string]bool   `json:"typingUser"`
 		}{
 			Type:            "new_connection",
 			OnlineUsers:     onlineUsers,
 			AllUsers:        allUsers,
 			LastMessages:    lastMessages,
 			LastMessageSeen: lastMessageSeen,
+			TypingUser:      typingUser,
 		}
 
 		jsonUpdate, err := json.Marshal(update)
@@ -340,7 +345,6 @@ func DeleteConnection(userID string, conn *websocket.Conn, typeReceived string) 
 		g.ActiveConnections[userID] = connections
 	}
 }
-
 
 // Get messages between current user and the specified user
 func HandleGetMessages(w http.ResponseWriter, r *http.Request) {
