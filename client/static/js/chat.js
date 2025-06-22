@@ -33,7 +33,6 @@ function connectWebSocket() {
                 const lastMessageSeen = data.lastMessageSeen || {}
                 const typingUser = data.typingUser || {}
                 const receivingUser = data.received || ""
-
                 try {
                     const response = await fetch('/api/check-session', { credentials: 'include' })
                     const result = await response.json()
@@ -47,6 +46,8 @@ function connectWebSocket() {
                 } catch {
                     handleUnauthorized()
                 }
+
+
 
                 return
             }
@@ -139,6 +140,10 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageS
     })
 
     for (let [userID, username] of userEntries) {
+        if (receivingUser === currentChatUserId) {
+            addTyping(userID, username, typingUser[userID])
+        }
+
         let userStatus = document.createElement('div')
         userStatus.classList.add('user-item')
         userStatus.setAttribute('data-user-id', userID)
@@ -146,8 +151,8 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageS
         userStatus.innerHTML = `
         <div class="user-status ${onlineUsers[userID] ? 'online-indicator' : 'offline-indicator'}"></div>
         <div class="user-name">${username}</div>
-        <div class="messages">${(lastMessageSeen[userID] == false) ? '<i class="fa-solid fa-message" id="newMessage"></i>' : ''}
-        <div class="typing">${(typingUser[userID] === true && receivingUser === currentChatUserId) ? "typing..." : ""}
+        <div class="typing">${(typingUser[userID] === true && receivingUser === currentChatUserId) ? "typing..." : ""}</div>
+        <div class="messages">${(lastMessageSeen[userID] == false) ? '<i class="fa-solid fa-message" id="newMessage"></i>' : ''}</div>
         `
         userList.appendChild(userStatus)
     }
@@ -162,6 +167,23 @@ document.addEventListener('click', (e) => {
         openChatPopup(userId, username)
     }
 })
+
+function addTyping(senderId, senderName, typing = false) {
+    const popupOpen = document.getElementById(`chat-popup-${senderId}`)
+
+    if (popupOpen) {
+        const popupHeader = popupOpen.querySelector('.chat-popup-header')
+
+        if (popupHeader) {
+            popupHeader.innerHTML = `
+                <span>${senderName} <span id="typingInChat">${(typing === true ? 'typing...' : '')}</span></span>
+                <span class="close-chat" title="Close">&times;</span>
+            `
+        }
+        popupOpen.querySelector('.close-chat').addEventListener('click', () => popupOpen.remove())
+    }
+}
+
 
 
 // this function handles the logic of the chat popup , opens it , add messages in its body
