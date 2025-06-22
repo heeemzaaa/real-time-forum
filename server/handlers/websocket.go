@@ -19,6 +19,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 var typingUser = make(map[string]bool)
+var receivingUser string
 
 // this function handles the websocket logic from connecting to deconnecting
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +97,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 		if message.Type == "typing" {
 			typingUser[userID] = message.Typing
+			receivingUser = message.ReceiverID
 			BroadcastUserStatus(userID)
 			continue
 		}
@@ -281,6 +283,7 @@ func BroadcastUserStatus(initiatorID string) {
 			LastMessages    map[string]string `json:"lastMessages"`
 			LastMessageSeen map[string]bool   `json:"lastMessageSeen"`
 			TypingUser      map[string]bool   `json:"typingUser"`
+			ReceivingUser   string            `json:"received"`
 		}{
 			Type:            "new_connection",
 			OnlineUsers:     onlineUsers,
@@ -288,6 +291,7 @@ func BroadcastUserStatus(initiatorID string) {
 			LastMessages:    lastMessages,
 			LastMessageSeen: lastMessageSeen,
 			TypingUser:      typingUser,
+			ReceivingUser:   receivingUser,
 		}
 
 		jsonUpdate, err := json.Marshal(update)

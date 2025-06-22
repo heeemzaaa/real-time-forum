@@ -5,6 +5,7 @@ let isOpen = false
 let denyConnection = false
 let counter = 0
 
+
 // this function connects handles the connection between the frontend and the backend
 function connectWebSocket() {
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -31,7 +32,7 @@ function connectWebSocket() {
                 const lastMessages = data.lastMessages || {}
                 const lastMessageSeen = data.lastMessageSeen || {}
                 const typingUser = data.typingUser || {}
-
+                const receivingUser = data.received || ""
 
                 try {
                     const response = await fetch('/api/check-session', { credentials: 'include' })
@@ -39,7 +40,7 @@ function connectWebSocket() {
 
                     if (result.message === "ok") {
                         currentChatUserId = result.userID
-                        loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen, typingUser)
+                        loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen, typingUser, receivingUser)
                     } else if (result.status === 401) {
                         handleUnauthorized()
                     }
@@ -57,6 +58,7 @@ function connectWebSocket() {
             ) {
                 appendMessageToPopup(data)
                 counter++
+
                 const isForMe = data.receiver_id === currentChatUserId
                 const popupOpen = document.getElementById(`chat-popup-${data.sender_id}`)
 
@@ -116,7 +118,7 @@ function handleUnauthorized() {
 
 
 // this function serves the list of users with their status, if online or offline
-function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageSeen, typingUser) {
+function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageSeen, typingUser, receivingUser) {
     userList.innerHTML = ''
 
     let userEntries = Object.entries(users).filter(([id]) => id !== currentUserId)
@@ -141,12 +143,11 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageS
         userStatus.classList.add('user-item')
         userStatus.setAttribute('data-user-id', userID)
         userStatus.classList.add(onlineUsers[userID] ? 'online' : 'offline')
-        console.log(typingUser)
         userStatus.innerHTML = `
         <div class="user-status ${onlineUsers[userID] ? 'online-indicator' : 'offline-indicator'}"></div>
         <div class="user-name">${username}</div>
         <div class="messages">${(lastMessageSeen[userID] == false) ? '<i class="fa-solid fa-message" id="newMessage"></i>' : ''}
-        <div class="typing">${(typingUser[userID] === true) ? "typing..." : ""}
+        <div class="typing">${(typingUser[userID] === true && receivingUser === currentChatUserId) ? "typing..." : ""}
         `
         userList.appendChild(userStatus)
     }
@@ -185,8 +186,6 @@ function openChatPopup(userId, username) {
     `
     document.body.appendChild(popup)
 
-    popup.querySelector('.close-chat').addEventListener('click', () => popup.remove())
-
     const seenUpdate = {
         type: "seen-update",
         sender_id: userId,
@@ -194,6 +193,9 @@ function openChatPopup(userId, username) {
         seen: true
     }
     socket.send(JSON.stringify(seenUpdate))
+
+    popup.querySelector('.close-chat').addEventListener('click', () => popup.remove())
+
 
     const popupOpen = document.getElementById(`chat-popup-${userId}`)
     if (popupOpen) {
