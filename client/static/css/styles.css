@@ -325,13 +325,6 @@ h1 {
     font-weight: bold;
 }
 
-@media only screen and (max-width: 1000px) {
-
-
-    #postsContainer {}
-
-}
-
 @media (max-width: 750px) {
 
     #span-icone {
