@@ -24,9 +24,7 @@ function loadCategories() {
         .then(data => {
             if (data.status != 200 && data.message) {
                 if (data.status == 401) {
-                    closePopup()
-                    showPage('register-login-page')
-                    Toast('You must login to fetch the categories')
+                    handleUnauthorized('You must login to fetch the categories')
                     return
                 }
                 errorPage(data.status, data.message)
@@ -210,9 +208,7 @@ function addPost() {
                 Toast(data.message || "Invalid data sent. Please check your input.")
             }
             else if (data.status === 401) {
-                closePopup()
-                showPage('register-login-page')
-                Toast("You have to login to add a post ! ❌")
+                handleUnauthorized("You have to login to add a post ! ❌")
             }
             else if (data.status === 405) {
                 errorPage(data.status, "Method not allowed. ❌")

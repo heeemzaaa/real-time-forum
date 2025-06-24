@@ -15,9 +15,7 @@ function showSinglePost(postId) {
         .then(data => {
             if (data.status && data.message) {
                 if (data.status == 401) {
-                    closePopup()
-                    showPage('register-login-page')
-                    Toast('You must login to see this post')
+                    handleUnauthorized('You must login to see this post')
                     return
                 }
                 errorPage(data.status, data.message)
@@ -79,9 +77,7 @@ function loadComments(postId) {
                 }
 
                 if (data.status == 401) {
-                    closePopup()
-                    showPage('register-login-page')
-                    Toast('You must login to see the comment')
+                    handleUnauthorized('You must login to see the comment')
                     return
                 }
 
@@ -157,9 +153,7 @@ function submitComment(postId) {
                 loadComments(postId)
             }
             else if (result.status === 401) {
-                closePopup()
-                showPage('register-login-page')
-                Toast("You must login to add a comment")
+                handleUnauthorized("You must login to add a comment")
             }
             else if (result.status === 400) {
                 Toast(result.message || "Invalid input. Please try again.")

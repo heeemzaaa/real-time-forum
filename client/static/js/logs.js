@@ -153,9 +153,9 @@ async function logIn() {
         const data = await response.json();
 
         if (data.status === 401 && data.message === "Username or Email not found !") {
-            Toast('Username or Email not found ❌')
+            handleUnauthorized('Username or Email not found ❌')
         } else if (data.status === 401 && data.message === "Password not correct!") {
-            Toast('Password not correct ❌')
+            handleUnauthorized('Password not correct ❌')
         } else if (data.status === 405) {
             errorPage(data.status, "Method Not Allowed")
             showPage('ErrorPage')
@@ -193,7 +193,7 @@ async function logOut() {
             errorPage(data.status, "Failed to log out. Try again.")
             showPage('ErrorPage')
         } else if (data.status === 401) {
-            showPage('register-login-page')
+            handleUnauthorized("There is an error in the session")
         } else if (data.status === 200 && data.message === "Session deleted successfully!") {
             Toast("See you soon 👋🏼")
             showPage('register-login-page')

@@ -21,19 +21,18 @@ async function checkSession() {
   try {
     const response = await fetch('/api/check-session')
     const result = await response.json()
-    
+
     if (result.status === 200 && result.message === "ok") {
       showPage('home-page')
     } else if (result.status === 401) {
-      closePopup()
-      showPage('register-login-page')
+      handleUnauthorized()
     } else {
       closePopup()
       errorPage(result.status || 500, result.message || "Unexpected error");
       showPage('ErrorPage');
     }
 
-  } catch(error) {
+  } catch (error) {
     console.error("Session check failed:", error)
     errorPage(500, "Failed to verify session. Try again later.");
     showPage('ErrorPage');
@@ -75,12 +74,10 @@ async function loadPosts() {
   try {
     const response = await fetch('/api/get-posts')
     const data = await response.json()
-    
+
     if (data.status != 200 && data.message) {
       if (data.status == 401) {
-        closePopup()
-        showPage('register-login-page')
-        Toast('You must login to see posts')
+        handleUnauthorized("You must login to see posts")
         return
       }
 
@@ -104,7 +101,7 @@ async function loadPosts() {
     postsContainer.innerHTML = ""
     renderPosts(data)
 
-  } catch(error) {
+  } catch (error) {
     console.error("Failed to load posts", error)
     errorPage(500, "Failed to connect to the server. Please try again later.")
     showPage('ErrorPage')

@@ -41,7 +41,7 @@ function connectWebSocket() {
                         currentChatUserId = result.userID
                         loadUsers(allUsers, onlineUsers, currentChatUserId, lastMessages, lastMessageSeen, typingUser, receivingUser)
                     } else if (result.status === 401) {
-                        handleUnauthorized()
+                        handleUnauthorized("You must login to interact with other users")
                     }
                 } catch {
                     handleUnauthorized()
@@ -111,10 +111,15 @@ function closePopup() {
 }
 
 // this function handles the cases of unauthorized people
-function handleUnauthorized() {
+function handleUnauthorized(message) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close(1000, "unauthorized !")
+    }
     closePopup()
     showPage('register-login-page')
-    Toast('You must login')
+    if (typeof message === 'string' && message.length > 0) {
+        Toast(message)
+    }
 }
 
 
@@ -247,9 +252,7 @@ function openChatPopup(userId, username) {
             .then(result => {
                 if (result.status == 401) {
                     permission = false
-                    showPage('register-login-page')
-                    closePopup()
-                    Toast('You must login to send a message')
+                    handleUnauthorized("You must login to send a message !")
                     return
                 } else {
                     permission = true
@@ -307,9 +310,7 @@ function loadMoreMessages(userId, container) {
         .then(res => res.json())
         .then(data => {
             if (data.status === 401) {
-                closePopup()
-                showPage('register-login-page')
-                Toast('You have to login to see messages')
+                handleUnauthorized("You must login to see the messages")
             } else if (data.status === 400) {
                 Toast(data.message || 'Invalid request')
             } else if (data.status === 500) {
@@ -375,9 +376,7 @@ function loadMessages(userId, container, offset = 0, limit = 10) {
         .then(res => res.json())
         .then(data => {
             if (data.status === 401) {
-                closePopup()
-                showPage('register-login-page')
-                Toast('You have to login to see messages')
+                handleUnauthorized("You must login to see the messages")
             } else if (data.status === 400) {
                 Toast(data.message || 'Invalid request')
             } else if (data.status === 500) {
