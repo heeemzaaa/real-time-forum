@@ -156,7 +156,12 @@ function loadUsers(users, onlineUsers, currentUserId, lastMessages, lastMessageS
         userStatus.innerHTML = `
         <div class="user-status ${onlineUsers[userID] ? 'online-indicator' : 'offline-indicator'}"></div>
         <div class="user-name">${username}</div>
-        <div class="typing">${(typingUser[userID] === true && receivingUser === currentChatUserId) ? "typing..." : ""}</div>
+        <div class="typing">${(typingUser[userID] === true && receivingUser === currentChatUserId) ? `<div class="typing">
+                                                                                                        <span></span>
+                                                                                                        <span></span>
+                                                                                                        <span></span>
+                                                                                                      </div>`
+                                                                                                     : ""}</div>
         <div class="messages">${(lastMessageSeen[userID] == false) ? '<i class="fa-solid fa-message" id="newMessage"></i>' : ''}</div>
         `
         userList.appendChild(userStatus)
@@ -238,7 +243,7 @@ function openChatPopup(userId, username) {
             timerId = setTimeout(() => {
                 typing = false
                 socket.send(JSON.stringify({ type: "typing", isTyping: typing, sender_id: currentChatUserId, receiver_id: userId }))
-            }, 1000)
+            }, 500)
 
         })
     }

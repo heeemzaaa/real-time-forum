@@ -102,14 +102,66 @@
 }
 
 .typing {
+    position: relative;
     font-size: small;
     margin-left: 5px;
 }
 
-#typingInChat {
-    font-size: small;
-    margin-left: 5px;
+.typing span {
+    content: '';
+    animation: blink 1.5s infinite;
+    animation-fill-mode: both;
+    height: 7px;
+    width: 7px;
+    background: #095aa5;
+    position: absolute;
+    top: 0;
+    border-radius: 50%;
 }
+
+.typing span:nth-child(1) {
+    left: 0;
+    animation-delay: 0s;
+}
+
+.typing span:nth-child(2) {
+    left: 15px; 
+    animation-delay: 0.2s;
+}
+
+.typing span:nth-child(3) {
+    left: 30px; 
+    animation-delay: 0.4s;
+}
+
+@keyframes blink {
+    0% {
+        opacity: 0.1;
+    }
+    20% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.1;
+    }
+}
+
+
+
+@keyframes blink {
+    0% {
+        opacity: .1;
+    }
+
+    20% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: .1;
+    }
+}
+
 @media only screen and (max-width: 425px) {
     .chat-popup {
         position: fixed;
