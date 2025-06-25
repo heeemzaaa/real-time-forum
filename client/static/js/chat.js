@@ -186,7 +186,12 @@ function addTyping(senderId, senderName, typing = false) {
 
         if (popupHeader) {
             popupHeader.innerHTML = `
-                <span>${senderName} <span id="typingInChat">${(typing === true ? 'typing...' : '')}</span></span>
+                <span>${senderName} ${(typing === true ? `
+                    <div class="typing typingInChat">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>` : '')}</span> 
                 <span class="close-chat" title="Close">&times;</span>
             `
         }
